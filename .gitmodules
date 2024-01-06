@@ -3,4 +3,4 @@
 	url = https://github.com/PhantomGamers/websocket-sharp
 [submodule "dep/BedrockFramework"]
 	path = dep/BedrockFramework
-	url = https://github.com/davidfowl/BedrockFramework.git
+	url = https://github.com/mos-ai/BedrockFramework.git
