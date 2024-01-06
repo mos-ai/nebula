@@ -11,6 +11,7 @@
         <ProjectReference Include="..\NebulaAPI\NebulaAPI.csproj" Private="false" />
         <ProjectReference Include="..\NebulaWorld\NebulaWorld.csproj" SpecificVersion="true" />
         <ProjectReference Include="..\dep\websocket-sharp\websocket-sharp\websocket-sharp.csproj" />
+        <ProjectReference Include="..\dep\BedrockFramework\src\Bedrock.Framework\Bedrock.Framework.csproj" />
     </ItemGroup>
     <ItemGroup>
         <Reference Include="System.IO.Compression" />
