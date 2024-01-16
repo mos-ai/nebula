@@ -6,6 +6,8 @@ using NebulaModel.DataStructures.Chat;
 using NebulaModel.Packets.Chat;
 using NebulaWorld.MonoBehaviours.Local.Chat;
 
+using NebulaModel.Utils;
+
 #endregion
 
 namespace NebulaWorld.Chat.Commands;
@@ -33,23 +35,24 @@ public class WhisperCommandHandler : IChatCommandHandler
             ChatMessageType.PlayerMessage);
 
         var packet = new ChatCommandWhisperPacket(senderUsername, recipientUserName, fullMessageBody);
+        AsyncUtil.RunSync(async () => await NebulaShim.Cloud.ChatGrain.WhisperPlayer(senderUsername, recipientUserName, fullMessageBody).ConfigureAwait(false));
 
-        if (Multiplayer.Session.LocalPlayer.IsHost)
-        {
-            var recipient = Multiplayer.Session.Network.PlayerManager.GetConnectedPlayerByUsername(recipientUserName);
-            if (recipient == null)
-            {
-                window.SendLocalChatMessage("Player not found: ".Translate() + recipientUserName,
-                    ChatMessageType.CommandErrorMessage);
-                return;
-            }
+        //if (Multiplayer.Session.LocalPlayer.IsHost)
+        //{
+        //    var recipient = Multiplayer.Session.Network.PlayerManager.GetConnectedPlayerByUsername(recipientUserName);
+        //    if (recipient == null)
+        //    {
+        //        window.SendLocalChatMessage("Player not found: ".Translate() + recipientUserName,
+        //            ChatMessageType.CommandErrorMessage);
+        //        return;
+        //    }
 
-            recipient.SendPacket(packet);
-        }
-        else
-        {
-            Multiplayer.Session.Network.SendPacket(packet);
-        }
+        //    recipient.SendPacket(packet);
+        //}
+        //else
+        //{
+        //    Multiplayer.Session.Network.SendPacket(packet);
+        //}
     }
 
     public string GetDescription()

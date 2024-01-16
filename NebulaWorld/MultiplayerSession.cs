@@ -87,6 +87,8 @@ public class MultiplayerSession : IDisposable, IMultiplayerSession
 
     public void Dispose()
     {
+        NebulaShim.Cloud.StopClient();
+
         Network?.Dispose();
         Network = null;
 
@@ -162,6 +164,7 @@ public class MultiplayerSession : IDisposable, IMultiplayerSession
             return;
         }
         Log.Info("Game load completed");
+
         IsGameLoaded = true;
         DiscordManager.UpdateRichPresence();
         ((NetworkProvider)Multiplayer.Session.Network).PacketProcessor.Enable = true;
@@ -174,6 +177,10 @@ public class MultiplayerSession : IDisposable, IMultiplayerSession
 
         if (Multiplayer.Session.LocalPlayer.IsInitialDataReceived)
         {
+            Log.Info("Starting DSPO");
+            NebulaShim.Cloud.StartClient();
+            Log.Info("Cloud client started.");
+
             Multiplayer.Session.World.SetupInitialPlayerState();
         }
     }
