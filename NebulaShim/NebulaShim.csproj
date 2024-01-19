@@ -7,11 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CoreRPC" Version="0.6.3" />
+    <ProjectReference Include="..\..\BedrockFramework\src\Bedrock.Framework\Bedrock.Framework.csproj" />
+    <ProjectReference Include="..\NebulaModel\NebulaModel.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\dsp-online\DSPO.RPC.Interfaces\DSPO.RPC.Interfaces.csproj" />
-  </ItemGroup>
-
+  
 </Project>

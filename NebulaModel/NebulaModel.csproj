@@ -3,7 +3,6 @@
     <ItemGroup>
         <ProjectReference Include="..\dep\websocket-sharp\websocket-sharp\websocket-sharp.csproj" />
         <ProjectReference Include="..\NebulaAPI\NebulaAPI.csproj" Private="false" />
-        <ProjectReference Include="..\NebulaShim\NebulaShim.csproj" />
     </ItemGroup>
 
     <ItemGroup>

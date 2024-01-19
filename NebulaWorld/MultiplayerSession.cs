@@ -177,9 +177,9 @@ public class MultiplayerSession : IDisposable, IMultiplayerSession
 
         if (Multiplayer.Session.LocalPlayer.IsInitialDataReceived)
         {
-            Log.Info("Starting DSPO");
+            Log.Debug("Starting DSPO");
             NebulaShim.Cloud.StartClient();
-            Log.Info("Cloud client started.");
+            Log.Debug("Cloud client started.");
 
             Multiplayer.Session.World.SetupInitialPlayerState();
         }
