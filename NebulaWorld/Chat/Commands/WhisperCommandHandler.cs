@@ -1,4 +1,4 @@
-﻿#region
+#region
 
 using System;
 using System.Linq;
@@ -35,7 +35,14 @@ public class WhisperCommandHandler : IChatCommandHandler
         ChatManager.Instance.SendChatMessage($"[{DateTime.Now:HH:mm}] [To: {recipientUserName}] : {fullMessageBody}",
             ChatMessageType.PlayerMessage);
 
-        var packet = new ChatCommandWhisperPacket(senderUsername, recipientUserName, fullMessageBody);
+        var packet = new ChatCommandWhisperPacket()
+        {
+            SenderUsername = senderUsername,
+            RecipientUsername = recipientUserName,
+            Message = fullMessageBody
+        };
+
+
         if (Multiplayer.Session.LocalPlayer.IsHost)
         {
             var recipient = Multiplayer.Session.Network.PlayerManager.GetConnectedPlayerByUsername(recipientUserName);

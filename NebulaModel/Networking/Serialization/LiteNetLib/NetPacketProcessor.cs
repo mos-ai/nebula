@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using Google.FlatBuffers;
 using NebulaAPI.Interfaces;
 using NebulaAPI.Packets;
 using NebulaModel.Logger;
+using NebulaModel.Packets.Chat;
 
 namespace NebulaModel.Networking.Serialization
 {
@@ -11,6 +13,7 @@ namespace NebulaModel.Networking.Serialization
         private static class HashCache<T>
         {
             public static readonly ulong Id;
+            public static readonly string TypeName = typeof(T).ToString();
 
             //FNV-1 64 bit hash
             static HashCache()
@@ -45,6 +48,10 @@ namespace NebulaModel.Networking.Serialization
         protected virtual ulong GetHash<T>()
         {
             return HashCache<T>.Id;
+        }
+        protected virtual string GetHashTypeName<T>()
+        {
+            return HashCache<T>.TypeName;
         }
 
         protected virtual SubscribeDelegate GetCallbackFromData(NetDataReader reader)
@@ -139,7 +146,18 @@ namespace NebulaModel.Networking.Serialization
         public void Write<T>(NetDataWriter writer, T packet) where T : class, new()
         {
             WriteHash<T>(writer);
-            _netSerializer.Serialize(writer, packet);
+            if (packet is ChatCommandWhisperPacket)
+            {
+                var c = packet as ChatCommandWhisperPacket;
+                FlatBufferBuilder fbb = new FlatBufferBuilder(1);
+                fbb.Finish(ChatCommandWhisperPacketT.Pack(fbb, c).Value);
+                writer.PutBytesWithLength(fbb.SizedByteArray());
+
+            }
+            else
+            {
+                _netSerializer.Serialize(writer, packet);
+            }
         }
 
         public void WriteNetSerializable<T>(NetDataWriter writer, ref T packet) where T : INetSerializable
@@ -159,6 +177,8 @@ namespace NebulaModel.Networking.Serialization
             GetCallbackFromData(reader)(reader, userData);
         }
 
+
+
         /// <summary>
         /// Register and subscribe to packet receive event
         /// </summary>
@@ -170,9 +190,20 @@ namespace NebulaModel.Networking.Serialization
             _netSerializer.Register<T>();
             _callbacks[GetHash<T>()] = (reader, userData) =>
             {
-                var reference = packetConstructor();
-                _netSerializer.Deserialize(reader, reference);
-                onReceive(reference);
+                if (typeof(T) == typeof(ChatCommandWhisperPacket))
+                {
+                    var v = ChatCommandWhisperPacketT.GetRootAsChatCommandWhisperPacketT(new ByteBuffer(reader.GetRemainingBytes()));
+                    var m = new T();
+                    v.UnPackTo(m as ChatCommandWhisperPacket);
+                    onReceive(m);
+
+                }
+                else
+                {
+                    var reference = packetConstructor();
+                    _netSerializer.Deserialize(reader, reference);
+                    onReceive(reference);
+                }
             };
             _callbacksDebugInfo[GetHash<T>()] = typeof(T);
         }
@@ -188,9 +219,21 @@ namespace NebulaModel.Networking.Serialization
             _netSerializer.Register<T>();
             _callbacks[GetHash<T>()] = (reader, userData) =>
             {
-                var reference = packetConstructor();
-                _netSerializer.Deserialize(reader, reference);
-                onReceive(reference, (TUserData)userData);
+                if (typeof(T) == typeof(ChatCommandWhisperPacket))
+                {
+                    var v = ChatCommandWhisperPacketT.GetRootAsChatCommandWhisperPacketT(new ByteBuffer(reader.GetRemainingBytes()));
+                    var m = new T();
+                    v.UnPackTo(m as ChatCommandWhisperPacket);
+                    onReceive(m, (TUserData)userData);
+
+                }
+                else
+                {
+                    var reference = packetConstructor();
+                    _netSerializer.Deserialize(reader, reference);
+                    onReceive(reference, (TUserData)userData);
+                }
+
             };
             _callbacksDebugInfo[GetHash<T>()] = typeof(T);
         }
@@ -207,7 +250,16 @@ namespace NebulaModel.Networking.Serialization
             var reference = new T();
             _callbacks[GetHash<T>()] = (reader, userData) =>
             {
-                _netSerializer.Deserialize(reader, reference);
+                if (typeof(T) == typeof(ChatCommandWhisperPacket))
+                {
+                    var v = ChatCommandWhisperPacketT.GetRootAsChatCommandWhisperPacketT(new ByteBuffer(reader.GetRemainingBytes()));
+                    v.UnPackTo(reference as ChatCommandWhisperPacket);
+                }
+                else
+                {
+                    _netSerializer.Deserialize(reader, reference);
+                }
+
                 onReceive(reference);
             };
             _callbacksDebugInfo[GetHash<T>()] = typeof(T);
@@ -225,7 +277,15 @@ namespace NebulaModel.Networking.Serialization
             var reference = new T();
             _callbacks[GetHash<T>()] = (reader, userData) =>
             {
-                _netSerializer.Deserialize(reader, reference);
+                if (typeof(T) == typeof(ChatCommandWhisperPacket))
+                {
+                    var v = ChatCommandWhisperPacketT.GetRootAsChatCommandWhisperPacketT(new ByteBuffer(reader.GetRemainingBytes()));
+                    v.UnPackTo(reference as ChatCommandWhisperPacket);
+                }
+                else
+                {
+                    _netSerializer.Deserialize(reader, reference);
+                }
                 onReceive(reference, (TUserData)userData);
             };
             _callbacksDebugInfo[GetHash<T>()] = typeof(T);

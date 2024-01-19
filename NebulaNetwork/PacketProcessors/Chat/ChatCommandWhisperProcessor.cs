@@ -37,8 +37,12 @@ internal class ChatCommandWhisperProcessor : PacketProcessor<ChatCommandWhisperP
             {
                 Log.Warn($"Recipient not found {packet.RecipientUsername}");
                 var sender = Multiplayer.Session.Network.PlayerManager.GetPlayer(conn);
-                sender.SendPacket(new ChatCommandWhisperPacket("SYSTEM".Translate(), packet.SenderUsername,
-                    string.Format("User not found {0}".Translate(), packet.RecipientUsername)));
+                sender.SendPacket(new ChatCommandWhisperPacket()
+                {
+                    SenderUsername = "SYSTEM".Translate(),
+                    RecipientUsername = packet.SenderUsername,
+                    Message = string.Format("User not found {0}".Translate(), packet.RecipientUsername)
+                });
                 return;
             }
 
