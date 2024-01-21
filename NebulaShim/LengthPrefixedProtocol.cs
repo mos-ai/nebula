@@ -26,12 +26,23 @@ namespace Protocols
 
         public void WriteMessage(Message message, IBufferWriter<byte> output)
         {
-            var lengthBuffer = output.GetSpan(4);
-            BinaryPrimitives.WriteInt32BigEndian(lengthBuffer, (int)message.Payload.Length);
-            output.Advance(4);
-            foreach (var memory in message.Payload)
+            NebulaModel.Logger.Log.Info("Start Write Message");
+            try
             {
-                output.Write(memory.Span);
+                var lengthBuffer = output.GetSpan(4);
+                BinaryPrimitives.WriteInt32BigEndian(lengthBuffer, (int)message.Payload.Length);
+                output.Advance(4);
+                foreach (var memory in message.Payload)
+                {
+                    output.Write(memory.Span);
+                }
+                NebulaModel.Logger.Log.Info("Finish Write Message");
+            }
+            catch (Exception ex)
+            {
+                NebulaModel.Logger.Log.Info("Write Message Exception");
+                NebulaModel.Logger.Log.Info($"Message: {ex.Message}");
+                NebulaModel.Logger.Log.Info($"Stack Trace\n{ex.StackTrace}");
             }
         }
     }

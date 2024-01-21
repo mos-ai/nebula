@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>StructPacker</id>
+    <title>Struct Packer</title>
+    <version>1.0.9-preview</version>
+    <authors>Rudolf Kurka</authors>
+    <owners>Rudolf Kurka</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/RudolfKurka/StructPacker</projectUrl> 
+    <language>en-US</language>
+    <repository type="git" url="https://github.com/RudolfKurka/StructPacker.git" branch="master" />
+    <copyright>Copyright ©2020 Rudolf Kurka</copyright>
+    <description>Low-level, lightweight and performance-focused binary serializer for C# struct types that uses Source Generators technology.
+One of the fastest serializers around with minimal impact on device resources (see website for benchmarks).
+
+Only for Visual Studio 2019 version 16.8+ and C# language.</description>
+    <tags>C# serializer</tags>    
+    <dependencies>
+      <group targetFramework="netstandard2.0">
+      </group>
+    </dependencies>    
+    <references>
+      <reference file="RudolfKurka.StructPackerTools.dll" />
+    </references>
+  </metadata>
+  <files>
+    <file src="bin\$configuration$\netstandard2.0\RudolfKurka.StructPacker.dll" target="analyzers\dotnet\cs" />
+    <file src="..\RudolfKurka.StructPackerTools\bin\$configuration$\netstandard2.0\RudolfKurka.StructPackerTools.dll" target="lib\netstandard2.0" />
+    <file src="..\RudolfKurka.StructPackerTools\bin\$configuration$\netstandard2.0\RudolfKurka.StructPackerTools.dll" target="ref\netstandard2.0" />
+
+    <file src="tools\*.ps1" target="tools" />
+  </files>
+</package>

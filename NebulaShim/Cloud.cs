@@ -7,10 +7,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bedrock.Framework;
 using Bedrock.Framework.Protocols;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Logging;
 using NebulaModel.Logger;
 using NebulaModel.Packets.Chat;
 using Protocols;
+
+using NamedPipeEndPoint = Bedrock.Framework.NamedPipeEndPoint;
 
 namespace NebulaShim;
 public static class Cloud
@@ -42,7 +45,7 @@ public static class Cloud
             WindowStyle = ProcessWindowStyle.Hidden,
             UseShellExecute = false
         };
-        ServerProcess = Process.Start(processInfo);
+        //ServerProcess = Process.Start(processInfo);
 
         cts = new CancellationTokenSource();
         _clientTask = Task.Run(async () => await RunClientAsync(cts.Token));
@@ -50,7 +53,7 @@ public static class Cloud
 
     private static async Task RunClientAsync(CancellationToken token)
     {
-        await Task.Delay(2000); // Need the client service to finish loading before trying to open the pipe.
+        await Task.Delay(2000).ConfigureAwait(false); // Need the client service to finish loading before trying to open the pipe.
 
         logger?.LogInformation("RunClientAsync Started.");
         cts = new CancellationTokenSource();
@@ -62,12 +65,22 @@ public static class Cloud
             .Build();
 
         logger?.LogInformation("Starting connection");
-        var connectCts = new CancellationTokenSource(5000);
-        var connection = await client.ConnectAsync(new NamedPipeEndPoint("dspo", impersonationLevel: TokenImpersonationLevel.None), connectCts.Token).ConfigureAwait(false);
+        ConnectionContext? connection = null;
+        try
+        {
+            connection = await client.ConnectAsync(new NamedPipeEndPoint("dspo", ".", impersonationLevel: TokenImpersonationLevel.None), token).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Connection exception occured.");
+            logger?.LogError($"Message: {ex.Message}");
+            logger?.LogError($"Stack Trace:\n{ex.StackTrace}");
+        }
+
         if (connection is null)
         {
-            logger?.LogCritical("Connection Failed.");
-            logger?.LogCritical($"Timeout: {connectCts.IsCancellationRequested}");
+            logger?.LogDebug("Connection Failed.");
+            logger?.LogDebug($"Cancellation Token: {token.IsCancellationRequested}");
             return;
         }
 
@@ -80,16 +93,20 @@ public static class Cloud
         logger?.LogInformation("Listening for messages");
         while (!token.IsCancellationRequested)
         {
-            var response = await reader.ReadAsync(protocol, token).ConfigureAwait(false);
-            logger?.LogInformation("Read response.");
-            if (response.IsCompleted || response.IsCanceled)
+            try
             {
-                break;
+                var response = await reader.ReadAsync(protocol, token).ConfigureAwait(false);
+                if (response.IsCompleted || response.IsCanceled)
+                {
+                    break;
+                }
+
+                HandleMessage(response.Message);
             }
-
-            reader.Advance();
-
-            HandleMessage(response.Message);
+            finally
+            {
+                reader.Advance();
+            }
         }
     }
 
@@ -103,17 +120,32 @@ public static class Cloud
 
     public static async ValueTask SendMessageAsync(Message message, CancellationToken token = default)
     {
+        logger?.LogInformation("Sending message");
         if (_writer is null || _writerProtocol is null)
         {
+            if (_writer is null) logger?.LogDebug("_writer is null.");
+            if (_writerProtocol is null) logger?.LogDebug("_writerProtocol is null.");
             throw new NullReferenceException("Not initialised.");
         }
 
-        await _writer.WriteAsync(_writerProtocol, message, token);
+        try
+        {
+            logger?.LogInformation("Start Write");
+            await _writer.WriteAsync(_writerProtocol, message, token).ConfigureAwait(false);
+            logger?.LogInformation("Message sent.");
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Writer exception occured.");
+            logger?.LogError($"Message: {ex.Message}");
+            logger?.LogError($"Stack Trace:\n{ex.StackTrace}");
+        }
     }
 
     private static void HandleMessage(Message message)
     {
+        logger?.LogInformation("Parsing response.");
         var result = Serializers.Deserialize(message.Payload);
-        logger?.LogInformation($"Response received: {nameof(ChatCommandWhisperPacket)}, Sender: '{result.SenderUsername}', Recipient: '{result.RecipientUsername}', Message: {result.Message}");
+        logger?.LogInformation($"Response received: {nameof(ChatCommandWhisperPacketStruct)}, Sender: '{result.SenderUsername}', Recipient: '{result.RecipientUsername}', Message: {result.Message}");
     }
 }

@@ -35,7 +35,7 @@ public class WhisperCommandHandler : IChatCommandHandler
         ChatManager.Instance.SendChatMessage($"[{DateTime.Now:HH:mm}] [To: {recipientUserName}] : {fullMessageBody}",
             ChatMessageType.PlayerMessage);
 
-        var packet = new ChatCommandWhisperPacket(senderUsername, recipientUserName, fullMessageBody);
+        var packet = new ChatCommandWhisperPacketStruct(senderUsername, recipientUserName, fullMessageBody);
         if (Multiplayer.Session.LocalPlayer.IsHost)
         {
             var recipient = Multiplayer.Session.Network.PlayerManager.GetConnectedPlayerByUsername(recipientUserName);
@@ -43,6 +43,10 @@ public class WhisperCommandHandler : IChatCommandHandler
             {
                 window.SendLocalChatMessage("Player not found: ".Translate() + recipientUserName,
                     ChatMessageType.CommandErrorMessage);
+                // TODO: Remove, only for testing.
+                NebulaModel.Logger.Log.Info("[Whisper] Player not found.");
+                Cloud.SendMessageAsync(new Protocols.Message(packet.Serialize())).ConfigureAwait(false);
+                NebulaModel.Logger.Log.Info("[Whisper] (Sent) Player not found.");
                 return;
             }
 
