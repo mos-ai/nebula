@@ -9,6 +9,7 @@ using Bedrock.Framework;
 using Bedrock.Framework.Protocols;
 using Microsoft.Extensions.Logging;
 using NebulaModel.Logger;
+using NebulaModel.Packets.Chat;
 using Protocols;
 
 namespace NebulaShim;
@@ -19,6 +20,9 @@ public static class Cloud
     private static Process? ServerProcess;
     private static Task? _clientTask;
     private static CancellationTokenSource? cts;
+
+    private static IMessageWriter<Message>? _writerProtocol;
+    private static ProtocolWriter? _writer;
 
     public static void StartClient()
     {
@@ -69,23 +73,23 @@ public static class Cloud
 
         logger?.LogInformation($"Client connected to {connection.LocalEndPoint}.");
         var protocol = new LengthPrefixedProtocol();
+        _writerProtocol = protocol;
         var reader = connection.CreateReader();
-        var writer = connection.CreateWriter();
+        _writer = connection.CreateWriter();
 
-        logger?.LogInformation("Starting message loop");
+        logger?.LogInformation("Listening for messages");
         while (!token.IsCancellationRequested)
         {
-            await Task.Delay(2000, token).ConfigureAwait(false);
-            logger?.LogInformation("Sending Message...");
-            await writer.WriteAsync(protocol, new Message(Encoding.UTF8.GetBytes("IT WORKS!!!!")), token).ConfigureAwait(false);
-            var result = await reader.ReadAsync(protocol, token).ConfigureAwait(false);
+            var response = await reader.ReadAsync(protocol, token).ConfigureAwait(false);
             logger?.LogInformation("Read response.");
-            if (result.IsCompleted)
+            if (response.IsCompleted || response.IsCanceled)
             {
                 break;
             }
 
             reader.Advance();
+
+            HandleMessage(response.Message);
         }
     }
 
@@ -95,5 +99,21 @@ public static class Cloud
 
         ServerProcess?.Close();
         ServerProcess = null;
+    }
+
+    public static async ValueTask SendMessageAsync(Message message, CancellationToken token = default)
+    {
+        if (_writer is null || _writerProtocol is null)
+        {
+            throw new NullReferenceException("Not initialised.");
+        }
+
+        await _writer.WriteAsync(_writerProtocol, message, token);
+    }
+
+    private static void HandleMessage(Message message)
+    {
+        var result = Serializers.Deserialize(message.Payload);
+        logger?.LogInformation($"Response received: {nameof(ChatCommandWhisperPacket)}, Sender: '{result.SenderUsername}', Recipient: '{result.RecipientUsername}', Message: {result.Message}");
     }
 }

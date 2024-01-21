@@ -46,11 +46,13 @@ public class WhisperCommandHandler : IChatCommandHandler
                 return;
             }
 
-            recipient.SendPacket(packet);
+            Cloud.SendMessageAsync(new Protocols.Message(packet.Serialize())).ConfigureAwait(false);
+            //recipient.SendPacket(packet);
         }
         else
         {
-            Multiplayer.Session.Network.SendPacket(packet);
+            Cloud.SendMessageAsync(new Protocols.Message(packet.Serialize())).ConfigureAwait(false);
+            //Multiplayer.Session.Network.SendPacket(packet);
         }
     }
 
