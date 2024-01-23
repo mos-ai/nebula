@@ -43,9 +43,10 @@ public static class Cloud
         var processInfo = new ProcessStartInfo(orleansClientPath)
         {
             WindowStyle = ProcessWindowStyle.Hidden,
-            UseShellExecute = false
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
-        //ServerProcess = Process.Start(processInfo);
+        ServerProcess = Process.Start(processInfo);
 
         cts = new CancellationTokenSource();
         _clientTask = Task.Run(async () => await RunClientAsync(cts.Token));
@@ -112,9 +113,17 @@ public static class Cloud
 
     public static void StopClient()
     {
+        logger?.LogInformation("Shutting down cloud connection.");
+
         cts?.Cancel();
 
-        ServerProcess?.Close();
+        ServerProcess?.CloseMainWindow();
+        if (!ServerProcess?.WaitForExit(5000) ?? false)
+        {
+            ServerProcess?.Kill();
+        }
+
+        ServerProcess?.Dispose();
         ServerProcess = null;
     }
 
