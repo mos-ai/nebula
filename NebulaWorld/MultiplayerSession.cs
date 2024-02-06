@@ -87,7 +87,7 @@ public class MultiplayerSession : IDisposable, IMultiplayerSession
 
     public void Dispose()
     {
-        NebulaShim.Cloud.StopClient();
+        NebulaSignalRShim.Cloud.StopClient();
 
         Network?.Dispose();
         Network = null;
@@ -178,7 +178,7 @@ public class MultiplayerSession : IDisposable, IMultiplayerSession
         if (Multiplayer.Session.LocalPlayer.IsInitialDataReceived)
         {
             Log.Debug("Starting DSPO");
-            NebulaShim.Cloud.StartClient();
+            NebulaSignalRShim.Cloud.StartClient();
             Log.Debug("Cloud client started.");
 
             Multiplayer.Session.World.SetupInitialPlayerState();

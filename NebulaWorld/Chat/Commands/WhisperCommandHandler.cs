@@ -7,7 +7,8 @@ using NebulaModel.Packets.Chat;
 using NebulaWorld.MonoBehaviours.Local.Chat;
 
 using NebulaModel.Utils;
-using NebulaShim;
+using NebulaSignalRShim;
+using AsyncAwaitBestPractices;
 
 #endregion
 
@@ -35,7 +36,7 @@ public class WhisperCommandHandler : IChatCommandHandler
         ChatManager.Instance.SendChatMessage($"[{DateTime.Now:HH:mm}] [To: {recipientUserName}] : {fullMessageBody}",
             ChatMessageType.PlayerMessage);
 
-        var packet = new ChatCommandWhisperPacketStruct(senderUsername, recipientUserName, fullMessageBody);
+        //var packet = new ChatCommandWhisperPacket(senderUsername, recipientUserName, fullMessageBody);
         if (Multiplayer.Session.LocalPlayer.IsHost)
         {
             var recipient = Multiplayer.Session.Network.PlayerManager.GetConnectedPlayerByUsername(recipientUserName);
@@ -45,18 +46,16 @@ public class WhisperCommandHandler : IChatCommandHandler
                     ChatMessageType.CommandErrorMessage);
                 // TODO: Remove, only for testing.
                 NebulaModel.Logger.Log.Info("[Whisper] Player not found.");
-                Cloud.SendMessageAsync(new Protocols.Message(packet.Serialize())).ConfigureAwait(false);
+                Cloud.Server.Chat.Whisper(senderUsername, recipientUserName, fullMessageBody).SafeFireAndForget();
                 NebulaModel.Logger.Log.Info("[Whisper] (Sent) Player not found.");
                 return;
             }
 
-            Cloud.SendMessageAsync(new Protocols.Message(packet.Serialize())).ConfigureAwait(false);
-            //recipient.SendPacket(packet);
+            Cloud.Server.Chat.Whisper(senderUsername, recipientUserName, fullMessageBody).SafeFireAndForget();
         }
         else
         {
-            Cloud.SendMessageAsync(new Protocols.Message(packet.Serialize())).ConfigureAwait(false);
-            //Multiplayer.Session.Network.SendPacket(packet);
+            Cloud.Server.Chat.Whisper(senderUsername, recipientUserName, fullMessageBody).SafeFireAndForget();
         }
     }
 

@@ -3,7 +3,6 @@ using System.Buffers;
 
 namespace NebulaModel.Packets.Chat;
 
-//[StructPacker.Pack]
 public class ChatCommandWhisperPacket
 {
     public ChatCommandWhisperPacket() { }
@@ -18,28 +17,4 @@ public class ChatCommandWhisperPacket
     public string SenderUsername { get; set; }
     public string RecipientUsername { get; set; }
     public string Message { get; set; }
-}
-
-[StructPacker.Pack]
-public struct ChatCommandWhisperPacketStruct
-{
-    public ChatCommandWhisperPacketStruct() { }
-
-    public ChatCommandWhisperPacketStruct(string sender, string recipient, string message)
-    {
-        SenderUsername = sender;
-        RecipientUsername = recipient;
-        Message = message;
-    }
-
-    public string SenderUsername { get; set; }
-    public string RecipientUsername { get; set; }
-    public string Message { get; set; }
-}
-
-public static partial class Serializers
-{
-    public static byte[] Serialize(this ChatCommandWhisperPacketStruct source) => source.Pack();
-    public static ChatCommandWhisperPacketStruct Deserialize(in byte[] bytes) { var result = new ChatCommandWhisperPacketStruct(); result.Unpack(bytes); return result; }
-    public static ChatCommandWhisperPacketStruct Deserialize(in ReadOnlySequence<byte> bytes) { var result = new ChatCommandWhisperPacketStruct(); result.Unpack(bytes.ToArray()); return result; }
 }
