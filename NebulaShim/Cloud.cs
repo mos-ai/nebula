@@ -57,8 +57,6 @@ public static class Cloud
         await Task.Delay(2000).ConfigureAwait(false); // Need the client service to finish loading before trying to open the pipe.
 
         logger?.LogInformation("RunClientAsync Started.");
-        cts = new CancellationTokenSource();
-
         logger?.LogInformation("Creating client");
         var client = new ClientBuilder()
             .UseNamedPipes()

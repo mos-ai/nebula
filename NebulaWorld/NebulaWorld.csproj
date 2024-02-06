@@ -1,9 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
+      <PackageReference Include="AsyncAwaitBestPractices" Version="7.0.0" />
+    </ItemGroup>
+    <ItemGroup>
         <ProjectReference Include="..\dep\discord_game_sdk\discord_game_sdk_dotnet.csproj" />
         <ProjectReference Include="..\NebulaModel\NebulaModel.csproj" SpecificVersion="true" />
         <ProjectReference Include="..\NebulaAPI\NebulaAPI.csproj" Private="false" />
-        <ProjectReference Include="..\NebulaShim\NebulaShim.csproj" />
     </ItemGroup>
 </Project>
