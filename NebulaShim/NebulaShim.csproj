@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\dep\BedrockFramework\src\Bedrock.Framework\Bedrock.Framework.csproj" />
     <ProjectReference Include="..\NebulaModel\NebulaModel.csproj" />
   </ItemGroup>
   

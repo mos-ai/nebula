@@ -7,8 +7,8 @@ using NebulaModel.Packets.Chat;
 using NebulaWorld.MonoBehaviours.Local.Chat;
 
 using NebulaModel.Utils;
-using NebulaSignalRShim;
 using AsyncAwaitBestPractices;
+using NebulaEasyRShim;
 
 #endregion
 

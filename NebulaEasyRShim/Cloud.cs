@@ -29,8 +29,9 @@ public static class Cloud
 
         Host = builder.Build();
         var connection = Host.Services.GetRequiredService<HubConnection>();
+
         // Register Endpoints.
-        connection.MapEndpoint<Hubs.Chat>();
+        connection.MapEndpoint<Hubs.Chat>(Host.Services);
 
         HostCTS = new CancellationTokenSource();
         HostTask = Task.Run(async () => await Host.StartAsync(), HostCTS.Token);
@@ -54,6 +55,7 @@ public static class Cloud
         var endPoint = new NamedPipeEndPoint("dspo", ".", impersonationLevel: System.Security.Principal.TokenImpersonationLevel.None);
         var builder = new HubConnectionBuilder();
 
+        builder.Services.AddSingleton<Microsoft.AspNetCore.Connections.IConnectionFactory, NamedPipeConnectionFactory>();
         builder.AddNewtonsoftJsonProtocol();
         //builder.AddStructPackProtocol();
         builder.WithNamedPipe(endPoint);
@@ -74,8 +76,9 @@ public static class Cloud
             {
                 return false;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"Exception: {ex.Message}");
                 Console.WriteLine("Failed to connect, trying again in 5000(ms)");
 
                 await Task.Delay(5000, token);

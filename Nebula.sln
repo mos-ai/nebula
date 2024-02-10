@@ -30,10 +30,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "discord_game_sdk_dotnet", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NebulaTests", "NebulaTests\NebulaTests.csproj", "{2F4901A9-8BDB-49A7-AD89-9E38B0B3350A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NebulaShim", "NebulaShim\NebulaShim.csproj", "{5FBA3830-ACAC-4FE7-87BD-E9273C8DE05A}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bedrock.Framework", "dep\BedrockFramework\src\Bedrock.Framework\Bedrock.Framework.csproj", "{0202FFE0-06E0-422D-B52C-1E6A815F3E86}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NebulaEasyRShim", "NebulaEasyRShim\NebulaEasyRShim.csproj", "{B3A6292C-2000-4D7F-9FF8-19D81313EB18}"
 EndProject
 Global
@@ -73,20 +69,6 @@ Global
 		{2F4901A9-8BDB-49A7-AD89-9E38B0B3350A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2F4901A9-8BDB-49A7-AD89-9E38B0B3350A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2F4901A9-8BDB-49A7-AD89-9E38B0B3350A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5FBA3830-ACAC-4FE7-87BD-E9273C8DE05A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5FBA3830-ACAC-4FE7-87BD-E9273C8DE05A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5FBA3830-ACAC-4FE7-87BD-E9273C8DE05A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0202FFE0-06E0-422D-B52C-1E6A815F3E86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0202FFE0-06E0-422D-B52C-1E6A815F3E86}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0202FFE0-06E0-422D-B52C-1E6A815F3E86}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0202FFE0-06E0-422D-B52C-1E6A815F3E86}.Release|Any CPU.Build.0 = Release|Any CPU
-<<<<<<< HEAD
-=======
-		{7F51C63F-0B24-4837-A7CF-7FA4EF6AB1E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7F51C63F-0B24-4837-A7CF-7FA4EF6AB1E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7F51C63F-0B24-4837-A7CF-7FA4EF6AB1E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7F51C63F-0B24-4837-A7CF-7FA4EF6AB1E4}.Release|Any CPU.Build.0 = Release|Any CPU
->>>>>>> 2e674ecfb1471391012304fb02f17df4a29ba601
 		{B3A6292C-2000-4D7F-9FF8-19D81313EB18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B3A6292C-2000-4D7F-9FF8-19D81313EB18}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B3A6292C-2000-4D7F-9FF8-19D81313EB18}.Release|Any CPU.ActiveCfg = Release|Any CPU
