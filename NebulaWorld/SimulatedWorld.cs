@@ -349,58 +349,6 @@ public class SimulatedWorld : IDisposable
         }
     }
 
-    public void OnDronesDraw()
-    {
-        using (GetRemotePlayersModels(out var remotePlayersModels))
-        {
-            //todo:replace
-            //foreach (var remoteModel in remotePlayersModels.Where(remoteModel =>
-            //             GameMain.mainPlayer.planetId == remoteModel.Value.Movement.localPlanetId))
-            //{
-            //    //remoteModel.Value.MechaInstance.droneRenderer.Draw();
-            //}
-        }
-    }
-
-    public void OnDronesGameTick(float dt)
-    {
-        var tmp = 1e10; //fake energy of remote player, needed to do the Update()
-        double tmp2 = 1;
-
-        using (GetRemotePlayersModels(out var remotePlayersModels))
-        {
-            //Update drones positions based on their targets
-            var prebuildPool = GameMain.localPlanet?.factory?.prebuildPool;
-
-            foreach (var remoteModel in remotePlayersModels)
-            {
-                var remoteMecha = remoteModel.Value.MechaInstance;
-                //todo:replace
-                /*var drones = remoteMecha.drones;
-                var droneCount = remoteMecha.droneCount;
-                var remotePosition = remoteModel.Value.Movement.GetLastPosition().LocalPlanetPosition.ToVector3();
-
-                for (var i = 0; i < droneCount; i++)
-                {
-                    //Update only moving drones of players on the same planet
-                    if (drones[i].stage == 0 || GameMain.mainPlayer.planetId != remoteModel.Value.Movement.localPlanetId)
-                    {
-                        continue;
-                    }
-                    if (drones[i].Update(prebuildPool, remotePosition, dt, ref tmp, ref tmp2, 0) == 0)
-                    {
-                        continue;
-                    }
-                    //Reset drone and release lock
-                    drones[i].stage = 3;
-                    GameMain.mainPlayer.mecha.droneLogic.serving.Remove(drones[i].targetObject);
-                    drones[i].targetObject = 0;
-                }
-                remoteMecha.droneRenderer.Update();*/
-            }
-        }
-    }
-
     public void RenderPlayerNameTagsOnStarmap(UIStarmap starmap)
     {
         // Make a copy of the "Icarus" text from the starmap
@@ -507,54 +455,50 @@ public class SimulatedWorld : IDisposable
 
     public void RenderPlayerNameTagsInGame()
     {
-        TextMesh uiSailIndicator_targetText = null;
-
         using (GetRemotePlayersModels(out var remotePlayersModels))
         {
             foreach (var playerModel in remotePlayersModels.Select(player => player.Value))
             {
-                GameObject playerNameText;
+                TextMesh playerNameText;
                 if (playerModel.InGameNameText != null)
                 {
                     playerNameText = playerModel.InGameNameText;
                 }
                 else
                 {
-                    // Only get the field required if we actually need to, no point getting it every time
-                    if (uiSailIndicator_targetText == null)
-                    {
-                        uiSailIndicator_targetText = UIRoot.instance.uiGame.sailIndicator.targetText;
-                    }
+                    var uiSailIndicator_targetText = UIRoot.instance.uiGame.sailIndicator.targetText;
 
                     // Initialise a new game object to contain the text
-                    playerModel.InGameNameText = playerNameText = new GameObject();
+                    var go = new GameObject();
                     // Make it follow the player transform
-                    playerNameText.transform.SetParent(playerModel.PlayerTransform, false);
+                    go.transform.SetParent(playerModel.PlayerTransform, false);
                     // Add a meshrenderer and textmesh component to show the text with a different font
-                    var meshRenderer = playerNameText.AddComponent<MeshRenderer>();
-                    var textMesh = playerNameText.AddComponent<TextMesh>();
+                    var meshRenderer = go.AddComponent<MeshRenderer>();
+                    meshRenderer.sharedMaterial =
+                        uiSailIndicator_targetText.gameObject.GetComponent<MeshRenderer>().sharedMaterial;
 
+                    var textMesh = go.AddComponent<TextMesh>();
                     // Set the text to be their name
                     textMesh.text = $"{playerModel.Username}";
                     // Align it to be centered below them
                     textMesh.anchor = TextAnchor.UpperCenter;
                     // Copy the font over from the sail indicator
                     textMesh.font = uiSailIndicator_targetText.font;
-                    meshRenderer.sharedMaterial =
-                        uiSailIndicator_targetText.gameObject.GetComponent<MeshRenderer>().sharedMaterial;
+                    textMesh.fontSize = 36;
 
-                    playerNameText.SetActive(true);
+                    playerModel.InGameNameText = playerNameText = textMesh;
+                    playerNameText.gameObject.SetActive(true);
                 }
 
                 // If the player is not on the same planet or is in space, then do not render their in-world tag
                 if (playerModel.Movement.localPlanetId != Multiplayer.Session.LocalPlayer.Data.LocalPlanetId &&
                     playerModel.Movement.localPlanetId <= 0)
                 {
-                    playerNameText.SetActive(false);
+                    playerNameText.gameObject.SetActive(false);
                 }
-                else if (!playerNameText.activeSelf)
+                else if (!playerNameText.gameObject.activeSelf)
                 {
-                    playerNameText.SetActive(true);
+                    playerNameText.gameObject.SetActive(true);
                 }
 
                 // Make sure the text is pointing at the camera
@@ -564,23 +508,9 @@ public class SimulatedWorld : IDisposable
                 // Resizes the text based on distance from camera for better visual quality
                 var distanceFromCamera =
                     Vector3.Distance(playerNameText.transform.position, transform.position);
-                var nameTextMesh = playerNameText.GetComponent<TextMesh>();
 
-                switch (distanceFromCamera)
-                {
-                    case > 100f:
-                        nameTextMesh.characterSize = 0.2f;
-                        nameTextMesh.fontSize = 60;
-                        break;
-                    case > 50f:
-                        nameTextMesh.characterSize = 0.15f;
-                        nameTextMesh.fontSize = 48;
-                        break;
-                    default:
-                        nameTextMesh.characterSize = 0.1f;
-                        nameTextMesh.fontSize = 36;
-                        break;
-                }
+                var scaleRatio = Config.Options.NameTagSize / (GameCamera.instance.planetMode ? 10000f : 30000f);
+                playerNameText.characterSize = scaleRatio * Mathf.Clamp(distanceFromCamera, 20f, 200f);
             }
         }
     }

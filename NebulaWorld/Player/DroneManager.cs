@@ -95,7 +95,7 @@ public class DroneManager : IDisposable
             var dronePlans = GetPlayerDronePlans(kv.Key);
             if (dronePlans.Length > 0)
             {
-                var player = Multiplayer.Session.Network.PlayerManager.GetPlayerById(kv.Key);
+                var player = Multiplayer.Session.Server.Players.Get(kv.Key);
                 Multiplayer.Session.Network.SendPacketToPlanet(new RemoveDroneOrdersPacket(dronePlans, CachedPositions[kv.Key].PlanetId),
                     player.Data.LocalPlanetId);
 
@@ -141,7 +141,8 @@ public class DroneManager : IDisposable
         }
         Multiplayer.Session.Network.SendPacket(new RemoveDroneOrdersPacket(new[] { entityId }, GameMain.mainPlayer.planetId));
         RemoveBuildRequest(entityId);
-        GameMain.galaxy.PlanetById(GameMain.mainPlayer.planetId)?.factory?.constructionSystem.constructServing.Remove(entityId);
+        // TODO(0.10.29.21869)
+        // GameMain.galaxy.PlanetById(GameMain.mainPlayer.planetId)?.factory?.constructionSystem.constructServing.Remove(entityId);
         return false;
     }
 

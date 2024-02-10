@@ -39,7 +39,7 @@ public class WhisperCommandHandler : IChatCommandHandler
         //var packet = new ChatCommandWhisperPacket(senderUsername, recipientUserName, fullMessageBody);
         if (Multiplayer.Session.LocalPlayer.IsHost)
         {
-            var recipient = Multiplayer.Session.Network.PlayerManager.GetConnectedPlayerByUsername(recipientUserName);
+            var recipient = Multiplayer.Session.Server.Players.Get(recipientUserName);
             if (recipient == null)
             {
                 window.SendLocalChatMessage("Player not found: ".Translate() + recipientUserName,

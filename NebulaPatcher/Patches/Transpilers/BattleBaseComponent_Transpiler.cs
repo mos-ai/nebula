@@ -86,9 +86,9 @@ internal class BattleBaseComponent_Transpiler
             // To:   BattleBaseComponent_Transpiler.AddItem(nextStorage, item, num11, num12, out num14, true, factory);
 
             codeMatcher
-                .MatchForward(false, new CodeMatch(i => i.opcode == OpCodes.Callvirt && ((MethodInfo)i.operand).Name == "AddItem"))
+                .MatchForward(false, new CodeMatch(i => i.opcode == OpCodes.Callvirt && ((MethodInfo)i.operand).Name == "AddItemFiltered"))
                 .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_1))
-                .SetAndAdvance(OpCodes.Call, AccessTools.Method(typeof(BattleBaseComponent_Transpiler), nameof(AddItem)));
+                .SetAndAdvance(OpCodes.Call, AccessTools.Method(typeof(BattleBaseComponent_Transpiler), nameof(AddItemFiltered)));
 
             return codeMatcher.InstructionEnumeration();
         }
@@ -104,7 +104,7 @@ internal class BattleBaseComponent_Transpiler
     {
         if (Multiplayer.IsActive && !Config.Options.SyncSoil) // Host
         {
-            using (Multiplayer.Session.Network.PlayerManager.GetConnectedPlayers(out var connectedPlayers))
+            var connectedPlayers = Multiplayer.Session.Server.Players.Connected;
             {
                 var totalPlayerCount = connectedPlayers.Count + (Multiplayer.IsDedicated ? 0 : 1);
                 if (totalPlayerCount > 0)
@@ -112,10 +112,7 @@ internal class BattleBaseComponent_Transpiler
                     // Sand gain is split between all connecting players
                     sandCount = (int)((float)sandCount / totalPlayerCount + 0.5f);
                     var packet = new PlayerSandCount(sandCount, true);
-                    foreach (var kvp in connectedPlayers)
-                    {
-                        kvp.Value.SendPacket(packet);
-                    }
+                    Multiplayer.Session.Server.SendPacket(packet);
                 }
             }
         }
@@ -129,9 +126,9 @@ internal class BattleBaseComponent_Transpiler
         }
     }
 
-    private static int AddItem(StorageComponent storage, int itemId, int count, int inc, ref int remainInc, bool useBan, PlanetFactory factory)
+    private static int AddItemFiltered(StorageComponent storage, int itemId, int count, int inc, ref int remainInc, bool useBan, PlanetFactory factory)
     {
-        var addedCount = storage.AddItem(itemId, count, inc, out remainInc, useBan);
+        var addedCount = storage.AddItemFiltered(itemId, count, inc, out remainInc, useBan);
         if (!Multiplayer.IsActive)
         {
             return addedCount;
@@ -144,7 +141,7 @@ internal class BattleBaseComponent_Transpiler
             Multiplayer.Session.Network.SendPacketToStar(
                 new StorageSyncRealtimeChangePacket(
                 storage.id,
-                StorageSyncRealtimeChangeEvent.AddItem1,
+                StorageSyncRealtimeChangeEvent.AddItemFiltered,
                 itemId, addedCount, useBan, planetId), starId);
         }
         return addedCount;
