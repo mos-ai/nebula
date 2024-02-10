@@ -1,6 +1,3 @@
 [submodule "websocket-sharp"]
 	path = dep/websocket-sharp
 	url = https://github.com/PhantomGamers/websocket-sharp
-[submodule "BedrockFramework"]
-	path = dep/BedrockFramework
-	url = https://github.com/mos-ai/BedrockFramework
