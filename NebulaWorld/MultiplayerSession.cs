@@ -1,6 +1,7 @@
 ﻿#region
 
 using System;
+using AsyncAwaitBestPractices;
 using NebulaAPI.GameState;
 using NebulaEasyRShim;
 using NebulaModel;
@@ -94,7 +95,7 @@ public class MultiplayerSession : IDisposable, IMultiplayerSession
 
     public void Dispose()
     {
-        Cloud.StopClient();
+        Cloud.StopClientAsync().SafeFireAndForget();
 
         Network?.Dispose();
         Network = null;
@@ -180,6 +181,9 @@ public class MultiplayerSession : IDisposable, IMultiplayerSession
         }
 
         Log.Info("Game load completed");
+        Log.Info("Starting DSPO");
+        Cloud.StartClientAsync().SafeFireAndForget();
+        Log.Info("Cloud client started.");
 
         IsGameLoaded = true;
         DiscordManager.UpdateRichPresence();
@@ -191,10 +195,6 @@ public class MultiplayerSession : IDisposable, IMultiplayerSession
 
         if (Multiplayer.Session.LocalPlayer.IsInitialDataReceived)
         {
-            Log.Debug("Starting DSPO");
-            Cloud.StartClient();
-            Log.Debug("Cloud client started.");
-
             Multiplayer.Session.World.SetupInitialPlayerState();
         }
     }

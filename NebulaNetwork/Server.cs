@@ -240,7 +240,7 @@ public class Server : IServer
         socket = new WebSocketServer(IPAddress.IPv6Any, Port)
         {
             Log = { Level = LogLevel.Debug, Output = Log.SocketOutput },
-            AllowForwardedRequest = true // This is required to make the websocket play nice with tunneling services like ngrok
+            //AllowForwardedRequest = true // This is required to make the websocket play nice with tunneling services like ngrok
         };
 
         if (!string.IsNullOrWhiteSpace(Config.Options.ServerPassword))
@@ -260,7 +260,7 @@ public class Server : IServer
         DisableNagleAlgorithm(socket);
         WebSocketService.PacketProcessor = PacketProcessor as NebulaNetPacketProcessor;
         WebSocketService.Server = this;
-        socket.AddWebSocketService<WebSocketService>("/socket", wse => new WebSocketService());
+        socket.AddWebSocketService<WebSocketService>("/socket", () => new WebSocketService());
         try
         {
             // Set wait time higher for high latency network

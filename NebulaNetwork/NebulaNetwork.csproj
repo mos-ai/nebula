@@ -5,12 +5,13 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Open.Nat" Version="2.1.0" />
+      <PackageReference Include="WebSocketSharp" Version="1.0.3-rc11" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\NebulaModel\NebulaModel.csproj" SpecificVersion="true" />
         <ProjectReference Include="..\NebulaAPI\NebulaAPI.csproj" Private="false" />
         <ProjectReference Include="..\NebulaWorld\NebulaWorld.csproj" SpecificVersion="true" />
-        <ProjectReference Include="..\dep\websocket-sharp\websocket-sharp\websocket-sharp.csproj" />
+        <!--<ProjectReference Include="..\dep\websocket-sharp\websocket-sharp\websocket-sharp.csproj" />-->
     </ItemGroup>
     <ItemGroup>
         <Reference Include="System.IO.Compression" />

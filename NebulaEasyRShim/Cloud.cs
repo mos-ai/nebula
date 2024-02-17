@@ -1,4 +1,5 @@
-﻿using Bedrock.Framework;
+﻿using System.Net;
+using Bedrock.Framework;
 using EasyR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -9,19 +10,18 @@ namespace NebulaEasyRShim;
 public static class Cloud
 {
     private static CancellationTokenSource? HostCTS;
-    private static Task? HostTask;
 
     internal static IHost? Host;
-    
+
     public static HubProxy Server = default;
 
-    public static void StartClient()
+    public static async Task StartClientAsync()
     {
         var builder = new HostBuilder();
 
         builder.ConfigureServices(services =>
         {
-            services.AddSingleton(serviceProvider => CreateConnection(serviceProvider));
+            services.AddSingleton(serviceProvider => CreateSocketConnection(serviceProvider));
 
             // Register Hubs
             services.AddSingleton<Hubs.Chat>();
@@ -34,31 +34,50 @@ public static class Cloud
         connection.MapEndpoint<Hubs.Chat>(Host.Services);
 
         HostCTS = new CancellationTokenSource();
-        HostTask = Task.Run(async () => await Host.StartAsync(), HostCTS.Token);
-        ConnectAsync(connection, HostCTS.Token).SafeFireAndForget();
-
-        Server = ActivatorUtilities.CreateInstance<HubProxy>(Host.Services);
+        Console.WriteLine("Starting Host");
+        await Host.StartAsync().ConfigureAwait(false);
+        Console.WriteLine("Connecting");
+        if (await ConnectAsync(connection, HostCTS.Token).ConfigureAwait(false))
+        {
+            Console.WriteLine("Connected");
+            Server = ActivatorUtilities.CreateInstance<HubProxy>(Host.Services);
+        }
+        else
+        {
+            Console.WriteLine("Failed to connect.");
+        }
     }
 
-    public static void StopClient()
+    public static async Task StopClientAsync()
     {
+        Console.WriteLine("Stopping Host");
         if (Host is null)
             return;
 
         HostCTS?.Cancel();
-
-        Host.StopAsync().GetAwaiter().GetResult();
+        await Host.StopAsync().ConfigureAwait(false);
+        Host.Dispose();
     }
 
-    private static HubConnection CreateConnection(IServiceProvider serviceProvider)
+    private static HubConnection CreateNamedPipeConnection(IServiceProvider serviceProvider)
     {
         var endPoint = new NamedPipeEndPoint("dspo", ".", impersonationLevel: System.Security.Principal.TokenImpersonationLevel.None);
         var builder = new HubConnectionBuilder();
 
-        builder.Services.AddSingleton<Microsoft.AspNetCore.Connections.IConnectionFactory, NamedPipeConnectionFactory>();
         builder.AddNewtonsoftJsonProtocol();
         //builder.AddStructPackProtocol();
         builder.WithNamedPipe(endPoint);
+        return builder.Build();
+    }
+
+    private static HubConnection CreateSocketConnection(IServiceProvider serviceProvider)
+    {
+        var endPoint = new IPEndPoint(IPAddress.Loopback, 9000);
+        var builder = new HubConnectionBuilder();
+
+        builder.AddNewtonsoftJsonProtocol();
+        //builder.AddStructPackProtocol();
+        builder.WithSocket(endPoint);
         return builder.Build();
     }
 
@@ -69,7 +88,8 @@ public static class Cloud
         {
             try
             {
-                await connection.StartAsync(token);
+                Console.WriteLine("Connecting...");
+                await connection.StartAsync(token).ConfigureAwait(false);
                 return true;
             }
             catch when (token.IsCancellationRequested)
@@ -79,9 +99,10 @@ public static class Cloud
             catch (Exception ex)
             {
                 Console.WriteLine($"Exception: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
                 Console.WriteLine("Failed to connect, trying again in 5000(ms)");
 
-                await Task.Delay(5000, token);
+                await Task.Delay(5000, token).ConfigureAwait(false);
             }
         }
 

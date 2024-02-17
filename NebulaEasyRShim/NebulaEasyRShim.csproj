@@ -1,14 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="AsyncAwaitBestPractices" Version="7.0.0" />
-    <PackageReference Include="Client.Unity" Version="0.0.0-alpha.0.4" />
+    <PackageReference Include="Backports.System.IO.Pipes" Version="1.1.1-alpha.0.2" />
+    <!--<PackageReference Include="Backports.System.IO.Pipes" Version="1.1.0" />-->
+    <PackageReference Include="Client.Unity" Version="1.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
-    <PackageReference Include="Protocols.NewtonsoftJson" Version="0.0.0-alpha.0.4" />
+    <PackageReference Include="Protocols.NewtonsoftJson" Version="1.0.1" />
   </ItemGroup>
 
 </Project>
