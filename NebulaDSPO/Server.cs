@@ -58,12 +58,12 @@ public class Server : IServer
     public event EventHandler<INebulaConnection>? Connected;
     public event EventHandler<INebulaConnection>? Disconnected;
 
-    public Server(string url, int port, bool loadSaveFile = false)
-        : this(new IPEndPoint(Dns.GetHostEntry(url).AddressList[0], port), loadSaveFile)
+    public Server(string url, int port, string password, bool loadSaveFile = false)
+        : this(new IPEndPoint(Dns.GetHostEntry(url).AddressList[0], port), password, loadSaveFile)
     {
     }
 
-    public Server(IPEndPoint endpoint, bool loadSaveFile = false)
+    public Server(IPEndPoint endpoint, string password, bool loadSaveFile = false)
     {
         ServerEndpoint = endpoint;
         this.loadSaveFile = loadSaveFile;
@@ -77,7 +77,7 @@ public class Server : IServer
 
     public void Disconnect(INebulaConnection conn, DisconnectionReason reason, string reasonMessage = "")
     {
-        this.serverManager.OnPlayerDisconnected(new ServerCore.Models.Internal.NebulaConnection(conn.Id));
+        this.serverManager?.OnPlayerDisconnected(new ServerCore.Models.Internal.NebulaConnection(conn.Id));
     }
 
     public void SendPacket<T>(T packet) where T : class, new()
@@ -95,7 +95,8 @@ public class Server : IServer
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendPacketExcludeAsync(packet, exclude).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendExclude"));
+        genericHubProxy?.SendPacketExcludeAsync(packet, new ServerCore.Models.Internal.NebulaConnection(exclude.Id))
+            .SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendExclude"));
     }
 
     public void SendPacketToLocalPlanet<T>(T packet) where T : class, new()
@@ -140,7 +141,8 @@ public class Server : IServer
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendPacketToStarExcludeAsync(packet, starId, exclude).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToStarExclusive"));
+        genericHubProxy?.SendPacketToStarExcludeAsync(packet, starId, new ServerCore.Models.Internal.NebulaConnection(exclude.Id))
+            .SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToStarExclusive"));
     }
 
     public void SendToMatching<T>(T packet, Predicate<INebulaPlayer> condition) where T : class, new()
@@ -158,7 +160,11 @@ public class Server : IServer
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendToPlayersAsync(players, packet).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToPlayers"));
+        genericHubProxy?.SendToPlayersAsync(players
+            .Select(x =>
+                new KeyValuePair<ServerCore.Models.Internal.NebulaConnection, INebulaPlayer>(new ServerCore.Models.Internal.NebulaConnection(x.Key.Id), x.Value)),
+                packet)
+            .SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToPlayers"));
     }
 
     public void Start()

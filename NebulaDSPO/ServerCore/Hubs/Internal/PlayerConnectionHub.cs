@@ -20,8 +20,8 @@ internal class PlayerConnectionHub : HubListener
 
     public override void RegisterEndPoints(HubConnection connection)
     {
-        RegisterEndPoint(connection.On("/playerConnectionHub/playerCconnected", this.serverManager.OnPlayerConnected));
-        RegisterEndPoint(connection.On<NebulaConnection>("/playerConnectionHub/playerDisconnected", this.serverManager.OnPlayerDisconnected));
+        RegisterEndPoint(connection.On("/playerConnectionHub/connected", this.serverManager.OnPlayerConnected));
+        RegisterEndPoint(connection.On<NebulaConnection>("/playerConnectionHub/disconnected", this.serverManager.OnPlayerDisconnected));
     }
 }
 

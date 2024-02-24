@@ -31,6 +31,8 @@ internal class UIMainMenu_Patch
     private static InputField hostIPAddressInput;
     private static InputField passwordInput;
 
+    private static RectTransform multiplayerHostMenu;
+
     [HarmonyPostfix]
     [HarmonyPatch(nameof(UIMainMenu._OnOpen))]
     [SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "Original Function Name")]
@@ -62,6 +64,7 @@ internal class UIMainMenu_Patch
         AddMultiplayerButton();
         AddMultiplayerSubMenu();
         AddMultiplayerJoinMenu();
+        AddMultiplayerHostJoinMenu();
     }
 
     [HarmonyPostfix]
@@ -116,15 +119,11 @@ internal class UIMainMenu_Patch
 
     private static void OnMultiplayerNewGameButtonClick()
     {
-        var s = new string(hostIPAddressInput.text.ToCharArray().Where(c => !char.IsWhiteSpace(c)).ToArray());
-        var hostAddress = ParseHost(s);
-        Log.Info($"Connecting to server proxy: {hostAddress}");
-        Multiplayer.HostGame(new NebulaDSPO.Server(hostAddress.Host, hostAddress.Port));
+        Multiplayer.ShouldReturnToJoinMenu = true;
 
-        Multiplayer.Session.IsInLobby = true;
-
-        UIRoot.instance.galaxySelect._Open();
-        UIRoot.instance.uiMainMenu._Close();
+        UIRoot.instance.CloseMainMenuUI();
+        multiplayerHostMenu.gameObject.SetActive(true);
+        hostIPAddressInput.characterLimit = 53;
     }
 
     private static void OnMultiplayerLoadGameButtonClick()
@@ -388,7 +387,118 @@ internal class UIMainMenu_Patch
 
 
     ///// Server
-    public static (string Host, int Port, bool IsIP) ParseHost(string ip)
+
+    private static void AddMultiplayerHostJoinMenu()
+    {
+        var overlayCanvasGo = GameObject.Find("Overlay Canvas");
+        var galaxySelectGo = overlayCanvasGo.transform.Find("Galaxy Select");
+        if (galaxySelectGo == null)
+        {
+            Log.Warn("'Overlay Canvas/Galaxy Select' not found!");
+            return;
+        }
+
+        var galaxySelectTemplate = galaxySelectGo.GetComponent<RectTransform>();
+
+        multiplayerHostMenu = Object.Instantiate(galaxySelectTemplate, galaxySelectTemplate.parent);
+        Object.Destroy(multiplayerHostMenu.gameObject.GetComponent<UIGalaxySelect>());
+
+        multiplayerHostMenu.gameObject.name = "Nebula - Multiplayer Host Menu";
+        for (var i = 0; i < multiplayerHostMenu.childCount; i++)
+        {
+            var child = multiplayerHostMenu.GetChild(i);
+            switch (child.name)
+            {
+                case "setting-group":
+                    for (var j = 0; j < child.childCount; j++)
+                    {
+                        var child2 = child.GetChild(j);
+                        switch (child2.name)
+                        {
+                            case "top-title":
+                                child2.GetComponent<Localizer>().enabled = false;
+                                child2.GetComponent<Text>().text = "Multiplayer Host".Translate();
+                                break;
+                            case "galaxy-seed":
+                                {
+                                    child2.GetComponent<Localizer>().enabled = false;
+                                    child2.GetComponent<Text>().text = "Host IP Address".Translate();
+                                    child2.name = "Host IP Address";
+                                    hostIPAddressInput = child2.GetComponentInChildren<InputField>();
+                                    hostIPAddressInput.onEndEdit.RemoveAllListeners();
+                                    hostIPAddressInput.onValueChanged.RemoveAllListeners();
+                                    //note: connectToUrl uses Dns.getHostEntry, which can only use up to 255 chars.
+                                    //256 will trigger an argument out of range exception
+                                    hostIPAddressInput.characterLimit = 255;
+
+                                    var ip = "127.0.0.1";
+                                    if (Config.Options.RememberLastIP && !string.IsNullOrWhiteSpace(Config.Options.LastIP))
+                                    {
+                                        ip = Config.Options.LastIP;
+                                    }
+                                    hostIPAddressInput.text = ip;
+                                    hostIPAddressInput.contentType = Config.Options.StreamerMode
+                                        ? InputField.ContentType.Password
+                                        : InputField.ContentType.Standard;
+                                    break;
+                                }
+                            default:
+                                // Remove all unused elements that may be added by other mods
+                                Object.Destroy(child2.gameObject);
+                                break;
+                        }
+                    }
+                    break;
+                case "start-button":
+                    OverrideButton(multiplayerHostMenu.Find("start-button").GetComponent<RectTransform>(), "Host Game".Translate(),
+                        OnJoinHostGameButtonClick);
+                    break;
+                case "cancel-button":
+                    OverrideButton(multiplayerHostMenu.Find("cancel-button").GetComponent<RectTransform>(), null,
+                        OnJoinHostGameBackButtonClick);
+                    break;
+                default:
+                    // Remove all unused elements that may be added by other mods
+                    Object.Destroy(child.gameObject);
+                    break;
+            }
+        }
+        if (hostIPAddressInput == null)
+        {
+            Log.Warn("setting-group/galaxy-seed not found!");
+        }
+        var addressTransform = hostIPAddressInput.transform.parent;
+        addressTransform.SetParent(multiplayerHostMenu);
+        addressTransform.localPosition = new Vector3(0, 335, 0);
+        var passwordTransform = Object.Instantiate(addressTransform, multiplayerHostMenu);
+        passwordTransform.localPosition += new Vector3(0, -36, 0);
+        passwordTransform.GetComponent<Text>().text = "Password (optional)".Translate();
+        passwordTransform.name = "Password (optional)";
+
+        passwordInput = passwordTransform.GetComponentInChildren<InputField>();
+        passwordInput.contentType = InputField.ContentType.Password;
+        passwordInput.text = "";
+        if (Config.Options.RememberLastClientPassword && !string.IsNullOrWhiteSpace(Config.Options.LastClientPassword))
+        {
+            passwordInput.text = Config.Options.LastClientPassword;
+        }
+
+        multiplayerHostMenu.gameObject.SetActive(false);
+    }
+
+    private static void OnJoinHostGameButtonClick()
+    {
+        var s = new string(hostIPAddressInput.text.ToCharArray().Where(c => !char.IsWhiteSpace(c)).ToArray());
+        JoinHostGame(s, passwordInput.text);
+    }
+
+    private static void OnJoinHostGameBackButtonClick()
+    {
+        multiplayerHostMenu.gameObject.SetActive(false);
+        UIRoot.instance.OpenMainMenuUI();
+    }
+
+    public static void JoinHostGame(string ip, string password = "", bool loadSaveFile = false)
     {
         // Remove whitespaces from connection string
         var s = ip;
@@ -450,6 +560,55 @@ internal class UIMainMenu_Patch
 
         p = p == 0 ? Config.Options.HostPort : p;
 
-        return (s, p, isIP);
+        UIRoot.instance.StartCoroutine(TryConnectHostToServer(s, p, isIP, password, loadSaveFile));
+    }
+
+    private static IEnumerator TryConnectHostToServer(string ip, int port, bool isIP, string password, bool loadSaveFile)
+    {
+        InGamePopup.ShowInfo("Connecting".Translate(), "Connecting to server...".Translate(), null);
+        multiplayerHostMenu.gameObject.SetActive(false);
+
+        // We need to wait here to have time to display the Connecting popup since the game freezes during the connection.
+        yield return new WaitForSeconds(0.5f);
+
+        if (!ConnectHostToServer(ip, port, isIP, password, loadSaveFile))
+        {
+            InGamePopup.FadeOut();
+            //re-enabling the menu again after failed connect attempt
+            InGamePopup.ShowWarning("Connect failed".Translate(), "Was not able to connect to server".Translate(), "OK");
+            multiplayerHostMenu.gameObject.SetActive(true);
+        }
+        else
+        {
+            Multiplayer.Session.IsInLobby = true;
+            InGamePopup.FadeOut();
+            UIRoot.instance.galaxySelect._Open();
+            UIRoot.instance.uiMainMenu._Close();
+        }
+    }
+
+    private static bool ConnectHostToServer(string connectionString, int serverPort, bool isIP, string password, bool loadSaveFile)
+    {
+        try
+        {
+            if (isIP)
+            {
+                Multiplayer.HostGame(new NebulaDSPO.Server(new IPEndPoint(IPAddress.Parse(connectionString), serverPort), password, loadSaveFile));
+                return true;
+            }
+
+            //trying to resolve as uri
+            if (!Uri.TryCreate(connectionString, UriKind.RelativeOrAbsolute, out _))
+            {
+                return false;
+            }
+            Multiplayer.HostGame(new NebulaDSPO.Server(connectionString, serverPort, password, loadSaveFile));
+            return true;
+        }
+        catch (Exception e)
+        {
+            Log.Error("ConnectToServer error:\n" + e);
+        }
+        return false;
     }
 }

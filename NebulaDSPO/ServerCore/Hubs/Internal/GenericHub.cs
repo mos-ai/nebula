@@ -8,6 +8,8 @@ using NebulaModel.Networking;
 using NebulaModel.Networking.Serialization;
 using NebulaModel.Utils;
 
+using NebulaConnection = NebulaDSPO.ServerCore.Models.Internal.NebulaConnection;
+
 namespace NebulaDSPO.ServerCore.Hubs.Internal;
 
 /// <summary>
@@ -58,7 +60,7 @@ internal class GenericHubProxy
     public Task SendPacketAsync<T>(T packet, CancellationToken cancellationToken = default) where T : class, new()
         => this.connection.InvokeAsync("/genericHub/send", packet, cancellationToken);
 
-    public Task SendPacketExcludeAsync<T>(T packet, INebulaConnection exclude, CancellationToken cancellationToken = default) where T : class, new()
+    public Task SendPacketExcludeAsync<T>(T packet, NebulaConnection exclude, CancellationToken cancellationToken = default) where T : class, new()
         => this.connection.InvokeAsync("/genericHub/sendExclude", packet, exclude, cancellationToken);
 
     public Task SendPacketToLocalPlanetAsync<T>(T packet, CancellationToken cancellationToken = default) where T : class, new()
@@ -73,12 +75,12 @@ internal class GenericHubProxy
     public Task SendPacketToStarAsync<T>(T packet, int starId, CancellationToken cancellationToken = default) where T : class, new()
         => this.connection.InvokeAsync("/genericHub/sendToStar", packet, starId, cancellationToken);
 
-    public Task SendPacketToStarExcludeAsync<T>(T packet, int starId, INebulaConnection exclude, CancellationToken cancellationToken = default) where T : class, new()
+    public Task SendPacketToStarExcludeAsync<T>(T packet, int starId, NebulaConnection exclude, CancellationToken cancellationToken = default) where T : class, new()
         => this.connection.InvokeAsync("/genericHub/sendToStarExclusive", packet, starId, exclude, cancellationToken);
 
     public Task SendToMatchingAsync<T>(T packet, Predicate<INebulaPlayer> condition, CancellationToken cancellationToken = default) where T : class, new()
         => this.connection.InvokeAsync("/genericHub/sendToMatching", packet, condition, cancellationToken);
 
-    public Task SendToPlayersAsync<T>(IEnumerable<KeyValuePair<INebulaConnection, INebulaPlayer>> players, T packet, CancellationToken cancellationToken = default) where T : class, new()
-        => this.connection.InvokeAsync("", players, packet, cancellationToken);
+    public Task SendToPlayersAsync<T>(IEnumerable<KeyValuePair<NebulaConnection, INebulaPlayer>> players, T packet, CancellationToken cancellationToken = default) where T : class, new()
+        => this.connection.InvokeAsync("/genericHub/sendToPlayers", players, packet, cancellationToken);
 }
