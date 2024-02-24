@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="AsyncAwaitBestPractices" Version="7.0.0" />
+    <PackageReference Include="Client.Unity" Version="1.0.3-alpha.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Protocols.NewtonsoftJson" Version="1.0.3-alpha.0.5" />
+    <PackageReference Include="System.Reactive" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NebulaModel\NebulaModel.csproj" />
+    <ProjectReference Include="..\NebulaWorld\NebulaWorld.csproj" />
+  </ItemGroup>
+
+</Project>

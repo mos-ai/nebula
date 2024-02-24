@@ -1,9 +1,11 @@
 ﻿#region
 
 using HarmonyLib;
+using NebulaDSPO;
 using NebulaModel;
 using NebulaNetwork;
 using NebulaWorld;
+using SaveManager = NebulaDSPO.SaveManager;
 
 #endregion
 

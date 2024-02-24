@@ -10,7 +10,6 @@ using System.Net.Sockets;
 using HarmonyLib;
 using NebulaModel;
 using NebulaModel.Logger;
-using NebulaNetwork;
 using NebulaWorld;
 using UnityEngine;
 using UnityEngine.Events;
@@ -117,8 +116,10 @@ internal class UIMainMenu_Patch
 
     private static void OnMultiplayerNewGameButtonClick()
     {
-        Log.Info($"Listening server on port {Config.Options.HostPort}");
-        Multiplayer.HostGame(new Server(Config.Options.HostPort));
+        var s = new string(hostIPAddressInput.text.ToCharArray().Where(c => !char.IsWhiteSpace(c)).ToArray());
+        var hostAddress = ParseHost(s);
+        Log.Info($"Connecting to server proxy: {hostAddress}");
+        Multiplayer.HostGame(new NebulaDSPO.Server(hostAddress.Host, hostAddress.Port));
 
         Multiplayer.Session.IsInLobby = true;
 
@@ -366,7 +367,7 @@ internal class UIMainMenu_Patch
         {
             if (isIP)
             {
-                Multiplayer.JoinGame(new Client(new IPEndPoint(IPAddress.Parse(connectionString), serverPort), password));
+                Multiplayer.JoinGame(new NebulaDSPO.Client(new IPEndPoint(IPAddress.Parse(connectionString), serverPort), password));
                 return true;
             }
 
@@ -375,7 +376,7 @@ internal class UIMainMenu_Patch
             {
                 return false;
             }
-            Multiplayer.JoinGame(new Client(connectionString, serverPort, password));
+            Multiplayer.JoinGame(new NebulaDSPO.Client(connectionString, serverPort, password));
             return true;
         }
         catch (Exception e)
@@ -383,5 +384,72 @@ internal class UIMainMenu_Patch
             Log.Error("ConnectToServer error:\n" + e);
         }
         return false;
+    }
+
+
+    ///// Server
+    public static (string Host, int Port, bool IsIP) ParseHost(string ip)
+    {
+        // Remove whitespaces from connection string
+        var s = ip;
+
+        // Taken from .net IPEndPoint
+        IPEndPoint result = null;
+        var addressLength = s.Length; // If there's no port then send the entire string to the address parser
+        var lastColonPos = s.LastIndexOf(':');
+
+        // Look to see if this is an IPv6 address with a port.
+        if (lastColonPos > 0)
+        {
+            if (s[lastColonPos - 1] == ']')
+            {
+                addressLength = lastColonPos;
+            }
+            // Look to see if this is IPv4 with a port (IPv6 will have another colon)
+            else if (s.Substring(0, lastColonPos).LastIndexOf(':') == -1)
+            {
+                addressLength = lastColonPos;
+            }
+        }
+
+        if (IPAddress.TryParse(s.Substring(0, addressLength), out var address))
+        {
+            uint port = 0;
+            if (addressLength == s.Length ||
+                uint.TryParse(s.Substring(addressLength + 1), NumberStyles.None, CultureInfo.InvariantCulture, out port) &&
+                port <= IPEndPoint.MaxPort)
+
+            {
+                result = new IPEndPoint(address, (int)port);
+            }
+        }
+
+        var isIP = false;
+        var p = 0;
+        if (result != null)
+        {
+            s = result.AddressFamily == AddressFamily.InterNetworkV6 ? $"[{result.Address}]" : $"{result.Address}";
+            p = result.Port;
+            isIP = true;
+        }
+        else
+        {
+            var tmpP = s.Split(':');
+            if (tmpP.Length == 2)
+            {
+                if (!int.TryParse(tmpP[1], out p))
+                {
+                    p = 0;
+                }
+                else
+                {
+                    s = tmpP[0];
+                }
+            }
+        }
+
+        p = p == 0 ? Config.Options.HostPort : p;
+
+        return (s, p, isIP);
     }
 }
