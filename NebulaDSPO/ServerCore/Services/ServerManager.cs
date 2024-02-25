@@ -22,6 +22,7 @@ internal class ServerManager : IDisposable
     private bool _disposedValue;
 
     private readonly ConnectionService connection;
+    private readonly PlayerConnectionHubProxy playerConnectionHubProxy;
     private readonly ILogger<ServerManager> logger;
 
     private readonly bool loadSaveFile;
@@ -36,9 +37,10 @@ internal class ServerManager : IDisposable
     public event EventHandler<INebulaConnection>? Connected;
     public event EventHandler<INebulaConnection>? Disconnected;
 
-    public ServerManager(ConnectionService connection, bool loadSaveFile, ILogger<ServerManager> logger)
+    public ServerManager(ConnectionService connection, PlayerConnectionHubProxy playerConnectionHubProxy, bool loadSaveFile, ILogger<ServerManager> logger)
     {
         this.connection = connection;
+        this.playerConnectionHubProxy = playerConnectionHubProxy;
         this.logger = logger;
 
         this.loadSaveFile = loadSaveFile;
@@ -46,7 +48,7 @@ internal class ServerManager : IDisposable
         this.events.Add(this.connection.ConectionChanged.Subscribe(ConnectionChanged));
     }
 
-    internal void OnPlayerConnected()
+    internal void OnPlayerConnected(string connectionId)
     {
         // Generate new data for the player
         var playerId = GetNextPlayerId();
@@ -63,6 +65,8 @@ internal class ServerManager : IDisposable
         INebulaPlayer newPlayer = new NebulaPlayer(playerConnection, playerData);
         if (!Players.TryAdd(playerConnection, newPlayer))
             throw new InvalidOperationException($"Connection {playerConnection.Id} already exists!");
+
+        this.playerConnectionHubProxy.PlayerConnectedAsync(connectionId, newPlayer.Id).SafeFireAndForget(ex => this.logger.LogError(ex, "Failed to call /serverCore/playerConnectionHub/playerConnected"));
 
         // return newPlayer;
         Connected?.Invoke(this, playerConnection);

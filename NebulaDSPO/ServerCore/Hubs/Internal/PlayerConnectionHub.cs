@@ -1,4 +1,5 @@
-﻿using EasyR.Client;
+﻿using System.Threading;
+using EasyR.Client;
 using NebulaDSPO.Hubs.Internal;
 using NebulaDSPO.ServerCore.Models.Internal;
 using NebulaDSPO.ServerCore.Services;
@@ -20,7 +21,7 @@ internal class PlayerConnectionHub : HubListener
 
     public override void RegisterEndPoints(HubConnection connection)
     {
-        RegisterEndPoint(connection.On("/playerConnectionHub/connected", this.serverManager.OnPlayerConnected));
+        RegisterEndPoint(connection.On<string>("/playerConnectionHub/connected", this.serverManager.OnPlayerConnected));
         RegisterEndPoint(connection.On<NebulaConnection>("/playerConnectionHub/disconnected", this.serverManager.OnPlayerDisconnected));
     }
 }
@@ -33,4 +34,7 @@ internal class PlayerConnectionHubProxy
     {
         this.connection = connection;
     }
+
+    public Task PlayerConnectedAsync(string connectionId, int playerId, CancellationToken cancellationToken = default)
+        => this.connection.InvokeAsync("/serverCore/playerConnectionHub/playerConnected", connectionId, playerId, cancellationToken);
 }

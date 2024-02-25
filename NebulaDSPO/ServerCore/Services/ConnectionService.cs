@@ -14,7 +14,6 @@ namespace NebulaDSPO.ServerCore.Services;
 internal class ConnectionService : IHostedService
 {
     private readonly HubConnection connection;
-    private readonly EndPoint serverEndPoint;
     private readonly ILogger<ConnectionService> logger;
 
     private bool stopRequested = false;
@@ -24,10 +23,9 @@ internal class ConnectionService : IHostedService
 
     public IObservable<bool> ConectionChanged => this.connectionChangedSubject.AsObservable();
 
-    public ConnectionService(HubConnection connection, EndPoint serverEndPoint, ILogger<ConnectionService> logger)
+    public ConnectionService(HubConnection connection, ILogger<ConnectionService> logger)
     {
         this.connection = connection;
-        this.serverEndPoint = serverEndPoint;
         this.logger = logger;
 
         this.connectionChangedSubject = new Subject<bool>();
@@ -38,15 +36,6 @@ internal class ConnectionService : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         await this.connection.StartAsync(cancellationToken).ConfigureAwait(false);
-
-        ((LocalPlayer)Multiplayer.Session.LocalPlayer).IsHost = true;
-
-        if (Config.Options.RememberLastIP)
-        {
-            // We've successfully connected, set connection as last ip, cutting out "ws://" and "/socket"
-            Config.Options.LastIP = this.serverEndPoint.ToString();
-            Config.SaveOptions();
-        }
 
         IsConnected = true;
         this.connectionChangedSubject.OnNext(true);

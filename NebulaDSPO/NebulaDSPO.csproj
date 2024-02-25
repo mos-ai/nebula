@@ -18,4 +18,10 @@
     <ProjectReference Include="..\NebulaWorld\NebulaWorld.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\dep\temp\Newtonsoft.Json-for-Unity-13.0.102\Plugins\Newtonsoft.Json AOT\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

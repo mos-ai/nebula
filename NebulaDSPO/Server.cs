@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using EasyR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,6 +9,7 @@ using NebulaAPI.DataStructures;
 using NebulaAPI.GameState;
 using NebulaAPI.Networking;
 using NebulaDSPO.ServerCore.Services;
+using NebulaModel;
 using NebulaModel.Networking;
 using NebulaModel.Packets.GameHistory;
 using NebulaWorld;
@@ -101,81 +99,96 @@ public class Server : IServer
 
     public void SendPacketToLocalPlanet<T>(T packet) where T : class, new()
     {
+        var planetId = GameMain.data.localPlanet?.id ?? -1;
+
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendPacketToLocalPlanetAsync(packet).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToLocalPlanet"));
+        SendPacketToPlanet(packet, planetId);
     }
 
     public void SendPacketToLocalStar<T>(T packet) where T : class, new()
     {
+        var starId = GameMain.data.localStar?.id ?? -1;
+
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendPacketToLocalStarAsync(packet).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToLocalStar"));
+        SendPacketToStar(packet, starId);
     }
 
     public void SendPacketToPlanet<T>(T packet, int planetId) where T : class, new()
     {
+        var players = Players.Connected
+            .Where(kvp => kvp.Value.Data.LocalPlanetId == planetId);
+
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendPacketToPlanetAsync(packet, planetId).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToPlanet"));
+        SendToPlayers(players, packet);
     }
 
     public void SendPacketToStar<T>(T packet, int starId) where T : class, new()
     {
+        var players = Players.Connected
+            .Where(kvp => kvp.Value.Data.LocalStarId == starId);
+
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendPacketToStarAsync(packet, starId).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToStar"));
+        SendToPlayers(players, packet);
     }
 
     public void SendPacketToStarExclude<T>(T packet, int starId, INebulaConnection exclude) where T : class, new()
     {
+        var players = Players.Connected
+            .Where(kvp => kvp.Value.Data.LocalStarId == starId && kvp.Key.Id != exclude.Id);
+
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendPacketToStarExcludeAsync(packet, starId, new ServerCore.Models.Internal.NebulaConnection(exclude.Id))
-            .SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToStarExclusive"));
+        SendToPlayers(players, packet);
     }
 
     public void SendToMatching<T>(T packet, Predicate<INebulaPlayer> condition) where T : class, new()
     {
+        var players = Players.Connected
+            .Where(kvp => condition(kvp.Value));
+
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendToMatchingAsync(packet, condition).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToMatching"));
+        SendToPlayers(players, packet);
     }
 
     public void SendToPlayers<T>(IEnumerable<KeyValuePair<INebulaConnection, INebulaPlayer>> players, T packet) where T : class, new()
     {
+        var playerConnections = players.Select(player => new ServerCore.Models.Internal.NebulaConnection(player.Key.Id));
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendToPlayersAsync(players
-            .Select(x =>
-                new KeyValuePair<ServerCore.Models.Internal.NebulaConnection, INebulaPlayer>(new ServerCore.Models.Internal.NebulaConnection(x.Key.Id), x.Value)),
-                packet)
+        genericHubProxy?.SendToPlayersAsync(playerConnections, packet)
             .SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToPlayers"));
     }
 
     public void Start()
     {
-        if (this.host is not null) Stop();
+        if (this.host is not null)
+            Stop();
 
         var builder = new HostBuilder();
         builder.ConfigureServices(services =>
         {
             services.AddSingleton(serviceProvider => CreateSocketConnection(ServerEndpoint));
-            services.AddHostedService<ServerCore.Services.ConnectionService>();
+            services.AddSingleton<ConnectionService>();
+            services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<ConnectionService>());
 
             // Hubs
             services.AddSingleton<ServerCore.Hubs.Chat>();
@@ -192,6 +205,7 @@ public class Server : IServer
             services.AddSingleton<ServerCore.Hubs.Warning>();
             // Catch all Hub
             services.AddSingleton<ServerCore.Hubs.Internal.GenericHub>();
+            services.AddSingleton<ServerCore.Hubs.Internal.PlayerConnectionHub>();
 
             // Client Proxies
             services.AddSingleton<ServerCore.Hubs.ChatProxy>();
@@ -208,6 +222,7 @@ public class Server : IServer
             services.AddSingleton<ServerCore.Hubs.WarningProxy>();
             // Catch all Client Proxy
             services.AddSingleton<ServerCore.Hubs.Internal.GenericHubProxy>();
+            services.AddSingleton<ServerCore.Hubs.Internal.PlayerConnectionHubProxy>();
 
             // Server Resources
             services.AddSingleton(serviceProvider => ActivatorUtilities.CreateInstance<ServerManager>(serviceProvider, this.loadSaveFile));
@@ -304,9 +319,26 @@ public class Server : IServer
     private static HubConnection CreateSocketConnection(IPEndPoint? endpoint = null)
     {
         endpoint ??= new IPEndPoint(IPAddress.Loopback, 9000);
+        if (endpoint.Port == 0)
+            endpoint.Port = 9000;
+
+        ((LocalPlayer)Multiplayer.Session.LocalPlayer).IsHost = true;
+
+        if (Config.Options.RememberLastIP)
+        {
+            // We've successfully connected, set connection as last ip, cutting out "ws://" and "/socket"
+            Config.Options.LastIP = endpoint.ToString();
+            Config.SaveOptions();
+        }
+
+        NebulaModel.Logger.Log.Info($"Connecting to: {endpoint.ToString()}");
+
         var builder = new HubConnectionBuilder();
 
-        builder.AddNewtonsoftJsonProtocol();
+        builder.AddNewtonsoftJsonProtocol(options =>
+        {
+            options.PayloadSerializerSettings.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto;
+        });
         //builder.AddStructPackProtocol();
         builder.WithSocket(endpoint);
         return builder.Build();

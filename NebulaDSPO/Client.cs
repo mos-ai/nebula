@@ -58,11 +58,13 @@ public class Client : IClient
 
     public void SendPacketExclude<T>(T packet, INebulaConnection exclude) where T : class, new()
     {
+        throw new NotSupportedException($"Client doesn't support {nameof(SendPacketExclude)}");
+
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendPacketExcludeAsync(packet, exclude).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendExclude"));
+        //genericHubProxy?.SendPacketExcludeAsync(packet, exclude).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendExclude"));
     }
 
     public void SendPacketToLocalPlanet<T>(T packet) where T : class, new()
@@ -85,43 +87,53 @@ public class Client : IClient
 
     public void SendPacketToPlanet<T>(T packet, int planetId) where T : class, new()
     {
+        throw new NotSupportedException($"Client doesn't support {nameof(SendPacketToPlanet)}");
+
+
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendPacketToPlanetAsync(packet, planetId).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToPlanet"));
+        //genericHubProxy?.SendPacketToPlanetAsync(packet, planetId).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToPlanet"));
     }
 
     public void SendPacketToStar<T>(T packet, int starId) where T : class, new()
     {
+        throw new NotSupportedException($"Client doesn't support {nameof(SendPacketToStar)}");
+
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendPacketToStarAsync(packet, starId).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToStar"));
+        //genericHubProxy?.SendPacketToStarAsync(packet, starId).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToStar"));
     }
 
     public void SendPacketToStarExclude<T>(T packet, int starId, INebulaConnection exclude) where T : class, new()
     {
+        throw new NotSupportedException($"Client doesn't support {nameof(SendPacketToStarExclude)}");
+
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendPacketToStarExcludeAsync(packet, starId, exclude).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToStarExclusive"));
+        //genericHubProxy?.SendPacketToStarExcludeAsync(packet, starId, exclude).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToStarExclusive"));
     }
 
     public void SendToMatching<T>(T packet, Predicate<INebulaPlayer> condition) where T : class, new()
     {
+        throw new NotSupportedException($"Client doesn't support {nameof(SendToMatching)}");
+        
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendToMatchingAsync(packet, condition).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToMatching"));
+        //genericHubProxy?.SendToMatchingAsync(packet, condition).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToMatching"));
     }
 
     public void Start()
     {
-        if (this.host is not null) Stop();
+        if (this.host is not null)
+            Stop();
 
         var builder = new HostBuilder();
         builder.ConfigureServices(services =>
@@ -241,7 +253,10 @@ public class Client : IClient
         endpoint ??= new IPEndPoint(IPAddress.Loopback, 9000);
         var builder = new HubConnectionBuilder();
 
-        builder.AddNewtonsoftJsonProtocol();
+        builder.AddNewtonsoftJsonProtocol(options =>
+        {
+            options.PayloadSerializerSettings.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto;
+        });
         //builder.AddStructPackProtocol();
         builder.WithSocket(endpoint);
         return builder.Build();
