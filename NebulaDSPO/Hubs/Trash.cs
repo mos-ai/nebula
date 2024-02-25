@@ -3,11 +3,8 @@ using NebulaDSPO.Hubs.Internal;
 
 namespace NebulaDSPO.Hubs;
 
-internal class Trash : HubListener
+internal class Trash
 {
-    public override void RegisterEndPoints(HubConnection connection)
-    {
-    }
 }
 
 internal class TrashProxy

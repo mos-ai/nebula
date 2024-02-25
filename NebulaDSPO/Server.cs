@@ -191,35 +191,35 @@ public class Server : IServer
             services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<ConnectionService>());
 
             // Hubs
-            services.AddSingleton<ServerCore.Hubs.Chat>();
-            services.AddSingleton<ServerCore.Hubs.Factory>();
-            services.AddSingleton<ServerCore.Hubs.GameHistory>();
-            services.AddSingleton<ServerCore.Hubs.Logistics>();
-            services.AddSingleton<ServerCore.Hubs.Planet>();
-            services.AddSingleton<ServerCore.Hubs.Players>();
-            services.AddSingleton<ServerCore.Hubs.Routers>();
-            services.AddSingleton<ServerCore.Hubs.Session>();
-            services.AddSingleton<ServerCore.Hubs.Statistics>();
-            services.AddSingleton<ServerCore.Hubs.Trash>();
-            services.AddSingleton<ServerCore.Hubs.Universe>();
-            services.AddSingleton<ServerCore.Hubs.Warning>();
+            //services.AddSingleton<ServerCore.Hubs.Chat>();
+            //services.AddSingleton<ServerCore.Hubs.Factory>();
+            //services.AddSingleton<ServerCore.Hubs.GameHistory>();
+            //services.AddSingleton<ServerCore.Hubs.Logistics>();
+            //services.AddSingleton<ServerCore.Hubs.Planet>();
+            //services.AddSingleton<ServerCore.Hubs.Players>();
+            //services.AddSingleton<ServerCore.Hubs.Routers>();
+            //services.AddSingleton<ServerCore.Hubs.Session>();
+            //services.AddSingleton<ServerCore.Hubs.Statistics>();
+            //services.AddSingleton<ServerCore.Hubs.Trash>();
+            //services.AddSingleton<ServerCore.Hubs.Universe>();
+            //services.AddSingleton<ServerCore.Hubs.Warning>();
             // Catch all Hub
             services.AddSingleton<ServerCore.Hubs.Internal.GenericHub>();
             services.AddSingleton<ServerCore.Hubs.Internal.PlayerConnectionHub>();
 
             // Client Proxies
-            services.AddSingleton<ServerCore.Hubs.ChatProxy>();
-            services.AddSingleton<ServerCore.Hubs.FactoryProxy>();
-            services.AddSingleton<ServerCore.Hubs.GameHistoryProxy>();
-            services.AddSingleton<ServerCore.Hubs.LogisticsProxy>();
-            services.AddSingleton<ServerCore.Hubs.PlanetProxy>();
-            services.AddSingleton<ServerCore.Hubs.PlayersProxy>();
-            services.AddSingleton<ServerCore.Hubs.RoutersProxy>();
-            services.AddSingleton<ServerCore.Hubs.SessionProxy>();
-            services.AddSingleton<ServerCore.Hubs.StatisticsProxy>();
-            services.AddSingleton<ServerCore.Hubs.TrashProxy>();
-            services.AddSingleton<ServerCore.Hubs.UniverseProxy>();
-            services.AddSingleton<ServerCore.Hubs.WarningProxy>();
+            //services.AddSingleton<ServerCore.Hubs.ChatProxy>();
+            //services.AddSingleton<ServerCore.Hubs.FactoryProxy>();
+            //services.AddSingleton<ServerCore.Hubs.GameHistoryProxy>();
+            //services.AddSingleton<ServerCore.Hubs.LogisticsProxy>();
+            //services.AddSingleton<ServerCore.Hubs.PlanetProxy>();
+            //services.AddSingleton<ServerCore.Hubs.PlayersProxy>();
+            //services.AddSingleton<ServerCore.Hubs.RoutersProxy>();
+            //services.AddSingleton<ServerCore.Hubs.SessionProxy>();
+            //services.AddSingleton<ServerCore.Hubs.StatisticsProxy>();
+            //services.AddSingleton<ServerCore.Hubs.TrashProxy>();
+            //services.AddSingleton<ServerCore.Hubs.UniverseProxy>();
+            //services.AddSingleton<ServerCore.Hubs.WarningProxy>();
             // Catch all Client Proxy
             services.AddSingleton<ServerCore.Hubs.Internal.GenericHubProxy>();
             services.AddSingleton<ServerCore.Hubs.Internal.PlayerConnectionHubProxy>();
@@ -230,30 +230,11 @@ public class Server : IServer
 
         this.host = builder.Build();
 
-        // Register endpoints.
-        this.host.MapEndpoint<ServerCore.Hubs.Chat>();
-        this.host.MapEndpoint<ServerCore.Hubs.Factory>();
-        this.host.MapEndpoint<ServerCore.Hubs.GameHistory>();
-        this.host.MapEndpoint<ServerCore.Hubs.Logistics>();
-        this.host.MapEndpoint<ServerCore.Hubs.Planet>();
-        this.host.MapEndpoint<ServerCore.Hubs.Players>();
-        this.host.MapEndpoint<ServerCore.Hubs.Routers>();
-        this.host.MapEndpoint<ServerCore.Hubs.Session>();
-        this.host.MapEndpoint<ServerCore.Hubs.Statistics>();
-        this.host.MapEndpoint<ServerCore.Hubs.Trash>();
-        this.host.MapEndpoint<ServerCore.Hubs.Universe>();
-        this.host.MapEndpoint<ServerCore.Hubs.Warning>();
-        // Catch all Hub
-        this.host.MapEndpoint<ServerCore.Hubs.Internal.GenericHub>();
-
         // Start Client
         this.host.Start();
 
         this.genericHub = host.Services.GetRequiredService<ServerCore.Hubs.Internal.GenericHub>();
         this.genericHubProxy = host.Services.GetRequiredService<ServerCore.Hubs.Internal.GenericHubProxy>();
-
-        this.genericHub.Initialise();
-
         this.serverManager = host.Services.GetRequiredService<ServerManager>();
     }
 

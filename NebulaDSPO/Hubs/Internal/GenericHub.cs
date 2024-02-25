@@ -1,6 +1,7 @@
 ﻿using EasyR.Client;
 using NebulaAPI;
 using NebulaAPI.Networking;
+using NebulaDSPO.Services;
 using NebulaModel.Networking;
 using NebulaModel.Networking.Serialization;
 using NebulaModel.Utils;
@@ -11,13 +12,14 @@ namespace NebulaDSPO.Hubs.Internal;
 /// <para>A Generic Hub to handle all function that haven't been mapped to a specific hub.</para>
 /// <para>Uses the <see cref="NebulaNetPacketProcessor"/> to handle packets as the default implementation does to minimise the work required to initially support updates.</para>
 /// </summary>
-internal class GenericHub : HubListener
+internal class GenericHub
 {
     internal INetPacketProcessor PacketProcessor { get; } = new NebulaNetPacketProcessor();
 
-    public override void RegisterEndPoints(HubConnection connection)
+    public GenericHub(ConnectionService connection)
     {
-        RegisterEndPoint(connection.On<byte[]>("/genericHub/onMessage", OnMessage));
+        Initialise();
+        connection.RegisterEndpoint(ep => ep.On<object>("/genericHub/onMessage", OnMessage));
     }
 
     internal void Initialise()
@@ -39,7 +41,7 @@ internal class GenericHub : HubListener
     internal void Update()
         => PacketProcessor.ProcessPacketQueue();
 
-    private void OnMessage(byte[] data)
+    private void OnMessage(object data)
         => PacketProcessor.EnqueuePacketForProcessing(data, null);
 }
 

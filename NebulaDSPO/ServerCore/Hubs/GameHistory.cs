@@ -1,14 +1,13 @@
-﻿using System;
-using EasyR.Client;
-using System.Collections.Generic;
-using NebulaDSPO.Hubs.Internal;
+﻿using EasyR.Client;
+using NebulaDSPO.ServerCore.Services;
 
 namespace NebulaDSPO.ServerCore.Hubs;
 
-internal class GameHistory : HubListener
+internal class GameHistory
 {
-    public override void RegisterEndPoints(HubConnection connection)
+    public GameHistory(ConnectionService connection)
     {
+        //connection.RegisterEndpoint(ep => ep.On<>("", ));
     }
 }
 

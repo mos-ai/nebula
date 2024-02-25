@@ -1,4 +1,4 @@
-﻿using System.Net;
+﻿using System.Collections.Generic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using EasyR.Client;
@@ -11,10 +11,14 @@ using NebulaWorld;
 
 namespace NebulaDSPO.ServerCore.Services;
 
-internal class ConnectionService : IHostedService
+internal class ConnectionService : IHostedService, IDisposable
 {
+    private bool _disposedValue;
+
     private readonly HubConnection connection;
     private readonly ILogger<ConnectionService> logger;
+
+    private List<IDisposable> endpointSubscriptions = new List<IDisposable>();
 
     private bool stopRequested = false;
     private readonly ISubject<bool> connectionChangedSubject;
@@ -41,8 +45,11 @@ internal class ConnectionService : IHostedService
         this.connectionChangedSubject.OnNext(true);
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken = default)
     {
+        if (this.connection == null)
+            return;
+
         stopRequested = true;
         await this.connection.StopAsync(cancellationToken).ConfigureAwait(false);
 
@@ -61,6 +68,11 @@ internal class ConnectionService : IHostedService
         IsConnected = false;
         stopRequested = false;
         this.connectionChangedSubject.OnNext(false);
+    }
+
+    public void RegisterEndpoint(Func<HubConnection, IDisposable> configure)
+    {
+        this.endpointSubscriptions.Add(configure(this.connection));
     }
 
     private Task Connection_Closed(Exception? arg)
@@ -109,5 +121,42 @@ internal class ConnectionService : IHostedService
         });
 
         return Task.CompletedTask;
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposedValue)
+        {
+            if (disposing)
+            {
+                foreach (var subscription in this.endpointSubscriptions)
+                {
+                    subscription.Dispose();
+                }
+
+                this.endpointSubscriptions.Clear();
+                this.endpointSubscriptions = null!;
+
+                StopAsync().GetAwaiter().GetResult();
+            }
+
+            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            // TODO: set large fields to null
+            _disposedValue = true;
+        }
+    }
+
+    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+    // ~ConnectionService()
+    // {
+    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    //     Dispose(disposing: false);
+    // }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

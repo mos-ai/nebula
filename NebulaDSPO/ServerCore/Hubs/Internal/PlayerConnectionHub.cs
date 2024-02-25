@@ -10,19 +10,16 @@ namespace NebulaDSPO.ServerCore.Hubs.Internal;
 /// <para>A Player Hub to handle when users connect and disconnect to the server.</para>
 /// <para>In the original client the host was actually the server so it was triggered by socket events. In this implementation we have to get these events passed to us by the server.</para>
 /// </summary>
-internal class PlayerConnectionHub : HubListener
+internal class PlayerConnectionHub
 {
     private readonly ServerManager serverManager;
 
-    public PlayerConnectionHub(ServerCore.Services.ServerManager serverManager)
+    public PlayerConnectionHub(ConnectionService connection, ServerCore.Services.ServerManager serverManager)
     {
         this.serverManager = serverManager;
-    }
 
-    public override void RegisterEndPoints(HubConnection connection)
-    {
-        RegisterEndPoint(connection.On<string>("/playerConnectionHub/connected", this.serverManager.OnPlayerConnected));
-        RegisterEndPoint(connection.On<NebulaConnection>("/playerConnectionHub/disconnected", this.serverManager.OnPlayerDisconnected));
+        connection.RegisterEndpoint(ep => ep.On<string>("/playerConnectionHub/connected", this.serverManager.OnPlayerConnected));
+        connection.RegisterEndpoint(ep => ep.On<NebulaConnection>("/playerConnectionHub/disconnected", this.serverManager.OnPlayerDisconnected));
     }
 }
 

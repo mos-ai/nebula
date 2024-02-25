@@ -1,12 +1,13 @@
 ﻿using EasyR.Client;
-using NebulaDSPO.Hubs.Internal;
+using NebulaDSPO.ServerCore.Services;
 
 namespace NebulaDSPO.ServerCore.Hubs;
 
-internal class Statistics : HubListener
+internal class Statistics
 {
-    public override void RegisterEndPoints(HubConnection connection)
+    public Statistics(ConnectionService connection)
     {
+        //connection.RegisterEndpoint(ep => ep.On<>("", ));
     }
 }
 

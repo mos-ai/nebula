@@ -5,11 +5,8 @@ using NebulaDSPO.Hubs.Internal;
 
 namespace NebulaDSPO.Hubs;
 
-internal class Players : HubListener
+internal class Players
 {
-    public override void RegisterEndPoints(HubConnection connection)
-    {
-    }
 }
 
 internal class PlayersProxy

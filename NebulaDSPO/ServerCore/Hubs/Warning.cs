@@ -1,13 +1,13 @@
-﻿using System;
-using EasyR.Client;
-using NebulaDSPO.Hubs.Internal;
+﻿using EasyR.Client;
+using NebulaDSPO.ServerCore.Services;
 
 namespace NebulaDSPO.ServerCore.Hubs;
 
-internal class Warning : HubListener
+internal class Warning
 {
-    public override void RegisterEndPoints(HubConnection connection)
+    public Warning(ConnectionService connection)
     {
+        //connection.RegisterEndpoint(ep => ep.On<>("", ));
     }
 }
 

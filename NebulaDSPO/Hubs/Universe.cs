@@ -3,11 +3,8 @@ using NebulaDSPO.Hubs.Internal;
 
 namespace NebulaDSPO.Hubs;
 
-internal class Universe : HubListener
+internal class Universe
 {
-    public override void RegisterEndPoints(HubConnection connection)
-    {
-    }
 }
 
 internal class UniverseProxy

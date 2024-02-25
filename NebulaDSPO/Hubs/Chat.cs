@@ -3,12 +3,8 @@ using NebulaDSPO.Hubs.Internal;
 
 namespace NebulaDSPO.Hubs;
 
-internal class Chat : HubListener
+internal class Chat
 {
-    public override void RegisterEndPoints(HubConnection connection)
-    {
-        //RegisterEndPoint(connection.On("", ?));
-    }
 }
 
 internal class ChatProxy

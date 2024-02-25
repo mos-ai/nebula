@@ -176,22 +176,6 @@ public class Client : IClient
 
         this.host = builder.Build();
 
-        // Register endpoints.
-        this.host.MapEndpoint<Hubs.Chat>();
-        this.host.MapEndpoint<Hubs.Factory>();
-        this.host.MapEndpoint<Hubs.GameHistory>();
-        this.host.MapEndpoint<Hubs.Logistics>();
-        this.host.MapEndpoint<Hubs.Planet>();
-        this.host.MapEndpoint<Hubs.Players>();
-        this.host.MapEndpoint<Hubs.Routers>();
-        this.host.MapEndpoint<Hubs.Session>();
-        this.host.MapEndpoint<Hubs.Statistics>();
-        this.host.MapEndpoint<Hubs.Trash>();
-        this.host.MapEndpoint<Hubs.Universe>();
-        this.host.MapEndpoint<Hubs.Warning>();
-        // Catch all Hub
-        this.host.MapEndpoint<Hubs.Internal.GenericHub>();
-
         // Start Client
         this.host.Start();
 
