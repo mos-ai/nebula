@@ -184,6 +184,12 @@ public class Server : IServer
             Stop();
 
         var builder = new HostBuilder();
+        builder.ConfigureLogging(logBuilder =>
+        {
+            logBuilder.AddConsole();
+            logBuilder.SetMinimumLevel(LogLevel.Trace);
+        });
+
         builder.ConfigureServices(services =>
         {
             services.AddSingleton(serviceProvider => CreateSocketConnection(ServerEndpoint));
@@ -312,10 +318,7 @@ public class Server : IServer
             Config.SaveOptions();
         }
 
-        NebulaModel.Logger.Log.Info($"Connecting to: {endpoint.ToString()}");
-
         var builder = new HubConnectionBuilder();
-
         builder.AddNewtonsoftJsonProtocol(options =>
         {
             options.PayloadSerializerSettings.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto;

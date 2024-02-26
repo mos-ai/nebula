@@ -46,6 +46,10 @@ internal class ServerManager : IDisposable
         this.loadSaveFile = loadSaveFile;
 
         this.events.Add(this.connection.ConectionChanged.Subscribe(ConnectionChanged));
+
+        // Check if already connected, if so initialise the game.
+        if (connection.IsConnected)
+            OnConnected();
     }
 
     internal void OnPlayerConnected(string connectionId)
@@ -152,11 +156,15 @@ internal class ServerManager : IDisposable
 
     private void OnConnected()
     {
+        this.logger.LogTrace("Server Connected");
+
         if (this.loadSaveFile)
         {
+            this.logger.LogTrace("Loading Save File");
             SaveManager.LoadServerData();
         }
 
+        this.logger.LogTrace("Populating LocalPlayer");
         ((LocalPlayer)Multiplayer.Session.LocalPlayer).SetPlayerData(new PlayerData(
                 GetNextPlayerId(),
                 GameMain.localPlanet?.id ?? -1,
@@ -165,6 +173,7 @@ internal class ServerManager : IDisposable
 
         try
         {
+            this.logger.LogTrace("Notifying Game Ready");
             NebulaModAPI.OnMultiplayerSessionChange(true);
             NebulaModAPI.OnMultiplayerGameStarted?.Invoke();
         }

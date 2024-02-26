@@ -21,9 +21,21 @@ internal class ConnectionService : IHostedService, IDisposable
     private List<IDisposable> endpointSubscriptions = new List<IDisposable>();
 
     private bool stopRequested = false;
+    private bool isConnected = false;
     private readonly ISubject<bool> connectionChangedSubject;
 
-    public bool IsConnected { get; private set; }
+    public bool IsConnected
+    {
+        get
+        {
+            return this.isConnected;
+        }
+        private set
+        {
+            this.isConnected = value;
+            this.logger.LogInformation("Connection State Changed: {State}", value);
+        }
+    }
 
     public IObservable<bool> ConectionChanged => this.connectionChangedSubject.AsObservable();
 
@@ -40,6 +52,8 @@ internal class ConnectionService : IHostedService, IDisposable
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         await this.connection.StartAsync(cancellationToken).ConfigureAwait(false);
+
+        // Authenticate?
 
         IsConnected = true;
         this.connectionChangedSubject.OnNext(true);
