@@ -84,7 +84,7 @@ public class Server : IServer
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendPacketAsync(packet).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/send"));
+        genericHubProxy?.SendPacketAsync(packet).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /serverCore/genericHub/send"));
     }
 
     public void SendPacketExclude<T>(T packet, INebulaConnection exclude) where T : class, new()
@@ -94,7 +94,7 @@ public class Server : IServer
 
         // For now just put all data through the generic hub
         genericHubProxy?.SendPacketExcludeAsync(packet, new ServerCore.Models.Internal.NebulaConnection(exclude.Id))
-            .SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendExclude"));
+            .SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /serverCore/genericHub/sendExclude"));
     }
 
     public void SendPacketToLocalPlanet<T>(T packet) where T : class, new()
@@ -129,6 +129,18 @@ public class Server : IServer
 
         // For now just put all data through the generic hub
         SendToPlayers(players, packet);
+    }
+
+    public Task SendPacketToPlanetAsync(byte[] rawData, int planetId)
+    {
+        var players = Players.Connected
+            .Where(kvp => kvp.Value.Data.LocalPlanetId == planetId);
+
+        // TODO: Implement a solution.
+        //HubDispatcher.Dispatch<T>(packet);
+
+        // For now just put all data through the generic hub
+        return SendToPlayersAsync(players, rawData);
     }
 
     public void SendPacketToStar<T>(T packet, int starId) where T : class, new()
@@ -175,7 +187,26 @@ public class Server : IServer
 
         // For now just put all data through the generic hub
         genericHubProxy?.SendToPlayersAsync(playerConnections, packet)
-            .SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/sendToPlayers"));
+            .SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /serverCore/genericHub/sendToPlayers"));
+    }
+
+    public Task SendToPlayersAsync(IEnumerable<KeyValuePair<INebulaConnection, INebulaPlayer>> players, byte[] rawData)
+    {
+        var playerConnections = players.Select(player => new ServerCore.Models.Internal.NebulaConnection(player.Key.Id));
+        // TODO: Implement a solution.
+        //HubDispatcher.Dispatch<T>(packet);
+
+        // For now just put all data through the generic hub
+        try
+        {
+            return genericHubProxy.SendToPlayersAsync(playerConnections, rawData);
+        }
+        catch (Exception ex)
+        {
+            this.logger?.LogError(ex, "Failed to call /serverCore/genericHub/sendToPlayers");
+        }
+
+        return Task.CompletedTask;
     }
 
     public void Start()

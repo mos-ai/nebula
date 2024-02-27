@@ -32,6 +32,9 @@ internal class PlayerConnectionHubProxy
         this.connection = connection;
     }
 
+    public Task ServerConnectedAsync(CancellationToken cancellationToken = default)
+        => this.connection.InvokeAsync("/serverCore/playerConnectionHub/serverConnected", cancellationToken);
+
     public Task PlayerConnectedAsync(string connectionId, int playerId, CancellationToken cancellationToken = default)
         => this.connection.InvokeAsync("/serverCore/playerConnectionHub/playerConnected", connectionId, playerId, cancellationToken);
 }

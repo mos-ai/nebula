@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
@@ -171,16 +172,26 @@ internal class ServerManager : IDisposable
                 !string.IsNullOrWhiteSpace(Config.Options.Nickname) ? Config.Options.Nickname : GameMain.data.account.userName),
             this.loadSaveFile);
 
-        try
-        {
-            this.logger.LogTrace("Notifying Game Ready");
-            NebulaModAPI.OnMultiplayerSessionChange(true);
-            NebulaModAPI.OnMultiplayerGameStarted?.Invoke();
-        }
-        catch (Exception ex)
-        {
-            this.logger.LogError(ex, "OnConnected error: {Message}", ex.Message);
-        }
+        this.playerConnectionHubProxy.ServerConnectedAsync()
+            .ContinueWith(result =>
+            {
+                try
+                {
+                    this.logger.LogTrace("Notifying Game Ready");
+                    NebulaModAPI.OnMultiplayerSessionChange(true);
+                    NebulaModAPI.OnMultiplayerGameStarted?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    this.logger.LogError(ex, "OnConnected error: {Message}", ex.Message);
+                }
+                return Task.CompletedTask;
+            })
+            .SafeFireAndForget(ex =>
+            {
+                this.logger.LogError(ex, "Failed to register Server with Gateway");
+                // TODO: Shutdown session.
+            });
     }
 
     private void OnDisconnected()

@@ -10,7 +10,7 @@ using NebulaModel.Networking;
 using NebulaModel.Networking.Serialization;
 using NebulaModel.Packets;
 using NebulaModel.Utils;
-
+using NebulaWorld;
 using NebulaConnection = NebulaDSPO.ServerCore.Models.Internal.NebulaConnection;
 
 namespace NebulaDSPO.ServerCore.Hubs.Internal;
@@ -21,16 +21,19 @@ namespace NebulaDSPO.ServerCore.Hubs.Internal;
 /// </summary>
 internal class GenericHub
 {
+    private readonly HubConnection connection;
     private readonly ILogger<GenericHub> logger;
 
     internal INetPacketProcessor PacketProcessor { get; } = new NebulaNetPacketProcessor();
 
-    public GenericHub(ConnectionService connection, ILogger<GenericHub> logger)
+    public GenericHub(ConnectionService connectionService, HubConnection hubConnection, ILogger<GenericHub> logger)
     {
+        this.connection = hubConnection;
         this.logger = logger;
 
         Initialise();
-        connection.RegisterEndpoint(ep => ep.On<byte[]>("/serverCore/genericHub/onMessage", OnMessage));
+        connectionService.RegisterEndpoint(ep => ep.On<byte[]>("/serverCore/genericHub/onMessage", OnMessage));
+        connectionService.RegisterEndpoint(ep => ep.On<byte[], int>("/serverCore/genericHub/onPlanetMessage", OnPlanetMessage));
     }
 
     internal void Initialise()
@@ -60,6 +63,11 @@ internal class GenericHub
 
     private void OnMessage(byte[] data)
         => PacketProcessor.EnqueuePacketForProcessing(data, null);
+
+    private async Task OnPlanetMessage(byte[] data, int planetId)
+    {
+        await ((Server)Multiplayer.Session.Server).SendPacketToPlanetAsync(data, planetId);
+    }
 }
 
 internal class GenericHubProxy
@@ -81,4 +89,7 @@ internal class GenericHubProxy
 
     public Task SendToPlayersAsync<T>(IEnumerable<NebulaConnection> players, T packet, CancellationToken cancellationToken = default) where T : class, new()
         => this.connection.InvokeAsync("/serverCore/genericHub/sendToPlayers", players.ToList(), this.genericHub.PacketProcessor.Write(packet), cancellationToken);
+
+    public Task SendToPlayersAsync(IEnumerable<NebulaConnection> players, byte[] rawData, CancellationToken cancellationToken = default)
+        => this.connection.InvokeAsync("/serverCore/genericHub/sendToPlayers", players.ToList(), rawData, cancellationToken);
 }
