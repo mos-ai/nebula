@@ -55,6 +55,8 @@ internal class ServerManager : IDisposable
 
     internal void OnPlayerConnected(string connectionId)
     {
+        this.logger.LogInformation("Player connected: {ConnectionId}", connectionId);
+
         // Generate new data for the player
         var playerId = GetNextPlayerId();
 

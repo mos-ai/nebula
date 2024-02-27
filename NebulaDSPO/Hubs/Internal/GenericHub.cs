@@ -1,10 +1,13 @@
-﻿using EasyR.Client;
+﻿using System.Reflection;
+using EasyR.Client;
+using Microsoft.Extensions.Logging;
 using NebulaAPI;
 using NebulaAPI.Networking;
 using NebulaDSPO.Services;
 using NebulaModel.Networking;
 using NebulaModel.Networking.Serialization;
 using NebulaModel.Utils;
+using NebulaWorld;
 
 namespace NebulaDSPO.Hubs.Internal;
 
@@ -14,25 +17,35 @@ namespace NebulaDSPO.Hubs.Internal;
 /// </summary>
 internal class GenericHub
 {
-    internal INetPacketProcessor PacketProcessor { get; } = new NebulaNetPacketProcessor();
+    private readonly ILogger<GenericHub> logger;
 
-    public GenericHub(ConnectionService connection)
+    internal static INetPacketProcessor PacketProcessor = new NebulaNetPacketProcessor();
+
+    public GenericHub(ConnectionService connection, ILogger<GenericHub> logger)
     {
+        this.logger = logger;
+
         Initialise();
-        connection.RegisterEndpoint(ep => ep.On<object>("/genericHub/onMessage", OnMessage));
+        connection.RegisterEndpoint(ep => ep.On<byte[]>("/genericHub/onMessage", OnMessage));
     }
 
     internal void Initialise()
     {
         foreach (var assembly in AssembliesUtils.GetNebulaAssemblies())
         {
+            this.logger.LogTrace("Registering assembly (Nebula): {Assembly.FullName}", assembly.FullName);
             PacketUtils.RegisterAllPacketNestedTypesInAssembly(assembly, PacketProcessor as NebulaNetPacketProcessor);
         }
 
         PacketUtils.RegisterAllPacketProcessorsInCallingAssembly(PacketProcessor as NebulaNetPacketProcessor, false);
 
+        var nebulaNetworkAssembly = Assembly.GetAssembly(typeof(NebulaNetwork.Client));
+        this.logger.LogTrace("Registering assembly (Manual): {Assembly.FullName}", nebulaNetworkAssembly.FullName);
+        PacketUtils.RegisterAllPacketProcessorsInAssembly(nebulaNetworkAssembly, PacketProcessor as NebulaNetPacketProcessor, false);
+
         foreach (var assembly in NebulaModAPI.TargetAssemblies)
         {
+            this.logger.LogTrace("Registering assembly (TargetAssemblies): {Assembly.FullName}", assembly.FullName);
             PacketUtils.RegisterAllPacketNestedTypesInAssembly(assembly, PacketProcessor as NebulaNetPacketProcessor);
             PacketUtils.RegisterAllPacketProcessorsInAssembly(assembly, PacketProcessor as NebulaNetPacketProcessor, false);
         }
@@ -41,30 +54,41 @@ internal class GenericHub
     internal void Update()
         => PacketProcessor.ProcessPacketQueue();
 
-    private void OnMessage(object data)
-        => PacketProcessor.EnqueuePacketForProcessing(data, null);
+    private void OnMessage(byte[] rawData)
+        => PacketProcessor.EnqueuePacketForProcessing(rawData, null);
 }
 
 internal class GenericHubProxy
 {
     private readonly HubConnection connection;
+    private readonly ILogger<GameHistoryProxy> logger;
 
-    public GenericHubProxy(HubConnection connection)
+    public GenericHubProxy(HubConnection connection, ILogger<GameHistoryProxy> logger)
     {
         this.connection = connection;
+        this.logger = logger;
     }
 
     public Task SendPacketAsync<T>(T packet, CancellationToken cancellationToken = default) where T : class, new()
-        => this.connection.InvokeAsync("/genericHub/send", packet, cancellationToken);
+    {
+        this.logger.LogInformation("Sending Packet");
+        return this.connection.InvokeAsync("/genericHub/send", GenericHub.PacketProcessor.Write(packet), cancellationToken);
+    }
 
     //public Task SendPacketExcludeAsync<T>(T packet, INebulaConnection exclude, CancellationToken cancellationToken = default) where T : class, new()
     //    => this.connection.InvokeAsync("/genericHub/sendExclude", packet, exclude, cancellationToken);
 
     public Task SendPacketToLocalPlanetAsync<T>(T packet, CancellationToken cancellationToken = default) where T : class, new()
-        => this.connection.InvokeAsync("/genericHub/sendToLocalPlanet", packet, cancellationToken);
+    {
+        this.logger.LogInformation("Sending Packet to Local Planet");
+        return this.connection.InvokeAsync("/genericHub/sendToPlanet", GenericHub.PacketProcessor.Write(packet), Multiplayer.Session.LocalPlayer.Data.LocalPlanetId, cancellationToken);
+    }
 
     public Task SendPacketToLocalStarAsync<T>(T packet, CancellationToken cancellationToken = default) where T : class, new()
-        => this.connection.InvokeAsync("/genericHub/sendToLocalStar", packet, cancellationToken);
+    {
+        this.logger.LogInformation("Sending Packet to Star");
+        return this.connection.InvokeAsync("/genericHub/sendToStar", GenericHub.PacketProcessor.Write(packet), Multiplayer.Session.LocalPlayer.Data.LocalStarId, cancellationToken);
+    }
 
     //public Task SendPacketToPlanetAsync<T>(T packet, int planetId, CancellationToken cancellationToken = default) where T : class, new()
     //    => this.connection.InvokeAsync("/genericHub/sendToPlanet", packet, planetId, cancellationToken);

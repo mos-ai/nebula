@@ -61,6 +61,7 @@ public class Server : IServer
     {
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Neblua API")]
     public Server(IPEndPoint endpoint, string password, bool loadSaveFile = false)
     {
         ServerEndpoint = endpoint;
@@ -153,6 +154,18 @@ public class Server : IServer
 
         // For now just put all data through the generic hub
         SendToPlayers(players, packet);
+    }
+
+    public Task SendPacketToStarAsync(byte[] rawData, int starId)
+    {
+        var players = Players.Connected
+            .Where(kvp => kvp.Value.Data.LocalStarId == starId);
+
+        // TODO: Implement a solution.
+        //HubDispatcher.Dispatch<T>(packet);
+
+        // For now just put all data through the generic hub
+        return SendToPlayersAsync(players, rawData);
     }
 
     public void SendPacketToStarExclude<T>(T packet, int starId, INebulaConnection exclude) where T : class, new()
@@ -277,13 +290,14 @@ public class Server : IServer
 
     public void Stop()
     {
-        this.host?.StopAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false).GetAwaiter().GetResult();
+        this.host?.StopAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(false).GetAwaiter().GetResult();
         this.host = null;
+        Dispose();
     }
 
     public void Update()
     {
-        this.genericHub?.PacketProcessor.ProcessPacketQueue();
+        this.genericHub?.Update();
 
         if (!Multiplayer.Session.IsGameLoaded)
         {

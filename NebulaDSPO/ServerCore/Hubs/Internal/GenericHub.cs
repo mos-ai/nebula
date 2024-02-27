@@ -32,8 +32,11 @@ internal class GenericHub
         this.logger = logger;
 
         Initialise();
+        connectionService.RegisterEndpoint(ep => ep.On<byte[]>("/genericHub/onMessage", OnMessage));
+
         connectionService.RegisterEndpoint(ep => ep.On<byte[]>("/serverCore/genericHub/onMessage", OnMessage));
         connectionService.RegisterEndpoint(ep => ep.On<byte[], int>("/serverCore/genericHub/onPlanetMessage", OnPlanetMessage));
+        connectionService.RegisterEndpoint(ep => ep.On<byte[], int>("/serverCore/genericHub/onStarMessage", OnStarMessage));
     }
 
     internal void Initialise()
@@ -44,18 +47,18 @@ internal class GenericHub
             PacketUtils.RegisterAllPacketNestedTypesInAssembly(assembly, PacketProcessor as NebulaNetPacketProcessor);
         }
 
-        PacketUtils.RegisterAllPacketProcessorsInCallingAssembly(PacketProcessor as NebulaNetPacketProcessor, false);
+        PacketUtils.RegisterAllPacketProcessorsInCallingAssembly(PacketProcessor as NebulaNetPacketProcessor, true);
+
+        var nebulaNetworkAssembly = Assembly.GetAssembly(typeof(NebulaNetwork.Server));
+        this.logger.LogTrace("Registering assembly (Manual): {Assembly.FullName}", nebulaNetworkAssembly.FullName);
+        PacketUtils.RegisterAllPacketProcessorsInAssembly(nebulaNetworkAssembly, PacketProcessor as NebulaNetPacketProcessor, true);
 
         foreach (var assembly in NebulaModAPI.TargetAssemblies)
         {
             this.logger.LogTrace("Registering assembly (TargetAssemblies): {Assembly.FullName}", assembly.FullName);
             PacketUtils.RegisterAllPacketNestedTypesInAssembly(assembly, PacketProcessor as NebulaNetPacketProcessor);
-            PacketUtils.RegisterAllPacketProcessorsInAssembly(assembly, PacketProcessor as NebulaNetPacketProcessor, false);
+            PacketUtils.RegisterAllPacketProcessorsInAssembly(assembly, PacketProcessor as NebulaNetPacketProcessor, true);
         }
-
-        var nebulaNetworkAssembly = Assembly.GetAssembly(typeof(NebulaNetwork.Server));
-        this.logger.LogTrace("Registering assembly (Manual): {Assembly.FullName}", nebulaNetworkAssembly.FullName);
-        PacketUtils.RegisterAllPacketProcessorsInAssembly(nebulaNetworkAssembly, PacketProcessor as NebulaNetPacketProcessor, false);
     }
 
     internal void Update()
@@ -64,10 +67,11 @@ internal class GenericHub
     private void OnMessage(byte[] data)
         => PacketProcessor.EnqueuePacketForProcessing(data, null);
 
-    private async Task OnPlanetMessage(byte[] data, int planetId)
-    {
-        await ((Server)Multiplayer.Session.Server).SendPacketToPlanetAsync(data, planetId);
-    }
+    private Task OnPlanetMessage(byte[] data, int planetId)
+        => ((Server)Multiplayer.Session.Server).SendPacketToPlanetAsync(data, planetId);
+
+    private Task OnStarMessage(byte[] data, int starId)
+        => ((Server)Multiplayer.Session.Server).SendPacketToStarAsync(data, starId);
 }
 
 internal class GenericHubProxy

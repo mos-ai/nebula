@@ -3,9 +3,10 @@ using EasyR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using NebulaAPI.GameState;
 using NebulaAPI.Networking;
+using NebulaDSPO.Services;
+using NebulaModel;
 using NebulaModel.Networking;
 using NebulaModel.Packets.GameStates;
 using NebulaModel.Packets.Players;
@@ -33,7 +34,7 @@ public class Client : IClient
     private float mechaSynchonizationTimer;
 
     public IPEndPoint ServerEndpoint { get; set; }
-    public INetPacketProcessor PacketProcessor => this.genericHub?.PacketProcessor ?? throw new ApplicationException("PacketProcessor not initialised. Have you started a game?");
+    public INetPacketProcessor PacketProcessor => Hubs.Internal.GenericHub.PacketProcessor;
 
     public Client(string url, int port, string password = "")
         : this(new IPEndPoint(Dns.GetHostEntry(url).AddressList[0], port), password)
@@ -44,7 +45,6 @@ public class Client : IClient
     public Client(IPEndPoint endpoint, string password = "")
     {
         ServerEndpoint = endpoint;
-        this.logger = NullLogger<Client>.Instance;
     }
 
     public void SendPacket<T>(T packet) where T : class, new()
@@ -136,40 +136,47 @@ public class Client : IClient
             Stop();
 
         var builder = new HostBuilder();
+        builder.ConfigureLogging(logBuilder =>
+        {
+            logBuilder.AddConsole();
+            logBuilder.SetMinimumLevel(LogLevel.Trace);
+        });
+
         builder.ConfigureServices(services =>
         {
             services.AddSingleton(serviceProvider => CreateSocketConnection(ServerEndpoint));
-            services.AddHostedService<Services.ConnectionService>();
+            services.AddSingleton<ConnectionService>();
+            services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<ConnectionService>());
 
             // Hubs
-            services.AddSingleton<Hubs.Chat>();
-            services.AddSingleton<Hubs.Factory>();
-            services.AddSingleton<Hubs.GameHistory>();
-            services.AddSingleton<Hubs.Logistics>();
-            services.AddSingleton<Hubs.Planet>();
-            services.AddSingleton<Hubs.Players>();
-            services.AddSingleton<Hubs.Routers>();
-            services.AddSingleton<Hubs.Session>();
-            services.AddSingleton<Hubs.Statistics>();
-            services.AddSingleton<Hubs.Trash>();
-            services.AddSingleton<Hubs.Universe>();
-            services.AddSingleton<Hubs.Warning>();
+            //services.AddSingleton<Hubs.Chat>();
+            //services.AddSingleton<Hubs.Factory>();
+            //services.AddSingleton<Hubs.GameHistory>();
+            //services.AddSingleton<Hubs.Logistics>();
+            //services.AddSingleton<Hubs.Planet>();
+            //services.AddSingleton<Hubs.Players>();
+            //services.AddSingleton<Hubs.Routers>();
+            //services.AddSingleton<Hubs.Session>();
+            //services.AddSingleton<Hubs.Statistics>();
+            //services.AddSingleton<Hubs.Trash>();
+            //services.AddSingleton<Hubs.Universe>();
+            //services.AddSingleton<Hubs.Warning>();
             // Catch all Hub
             services.AddSingleton<Hubs.Internal.GenericHub>();
 
             // Client Proxies
-            services.AddSingleton<Hubs.ChatProxy>();
-            services.AddSingleton<Hubs.FactoryProxy>();
-            services.AddSingleton<Hubs.GameHistoryProxy>();
-            services.AddSingleton<Hubs.LogisticsProxy>();
-            services.AddSingleton<Hubs.PlanetProxy>();
-            services.AddSingleton<Hubs.PlayersProxy>();
-            services.AddSingleton<Hubs.RoutersProxy>();
-            services.AddSingleton<Hubs.SessionProxy>();
-            services.AddSingleton<Hubs.StatisticsProxy>();
-            services.AddSingleton<Hubs.TrashProxy>();
-            services.AddSingleton<Hubs.UniverseProxy>();
-            services.AddSingleton<Hubs.WarningProxy>();
+            //services.AddSingleton<Hubs.ChatProxy>();
+            //services.AddSingleton<Hubs.FactoryProxy>();
+            //services.AddSingleton<Hubs.GameHistoryProxy>();
+            //services.AddSingleton<Hubs.LogisticsProxy>();
+            //services.AddSingleton<Hubs.PlanetProxy>();
+            //services.AddSingleton<Hubs.PlayersProxy>();
+            //services.AddSingleton<Hubs.RoutersProxy>();
+            //services.AddSingleton<Hubs.SessionProxy>();
+            //services.AddSingleton<Hubs.StatisticsProxy>();
+            //services.AddSingleton<Hubs.TrashProxy>();
+            //services.AddSingleton<Hubs.UniverseProxy>();
+            //services.AddSingleton<Hubs.WarningProxy>();
             // Catch all Client Proxy
             services.AddSingleton<Hubs.Internal.GenericHubProxy>();
         });
@@ -181,14 +188,13 @@ public class Client : IClient
 
         this.genericHub = host.Services.GetRequiredService<Hubs.Internal.GenericHub>();
         this.genericHubProxy = host.Services.GetRequiredService<Hubs.Internal.GenericHubProxy>();
-
-        this.genericHub.Initialise();
     }
 
     public void Stop()
     {
         this.host?.StopAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(false).GetAwaiter().GetResult();
         this.host = null;
+        Dispose();
     }
 
     public void Update()
@@ -236,6 +242,15 @@ public class Client : IClient
     {
         endpoint ??= new IPEndPoint(IPAddress.Loopback, 9000);
         var builder = new HubConnectionBuilder();
+
+        ((LocalPlayer)Multiplayer.Session.LocalPlayer).IsHost = false;
+
+        if (Config.Options.RememberLastIP)
+        {
+            // We've successfully connected, set connection as last ip, cutting out "ws://" and "/socket"
+            Config.Options.LastIP = endpoint.ToString();
+            Config.SaveOptions();
+        }
 
         builder.AddNewtonsoftJsonProtocol(options =>
         {

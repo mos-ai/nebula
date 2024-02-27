@@ -4,6 +4,7 @@ using EasyR.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NebulaAPI;
+using NebulaDSPO.Hubs.Internal;
 using NebulaModel;
 using NebulaModel.Packets.Session;
 using NebulaModel.Utils;
@@ -16,17 +17,17 @@ internal class ConnectionService : IHostedService, IDisposable
     private bool _disposedValue;
 
     private readonly HubConnection connection;
-    private readonly EndPoint serverEndPoint;
+    private readonly GenericHubProxy genericHubProxy;
     private readonly ILogger<ConnectionService> logger;
 
     private List<IDisposable> endpointSubscriptions = new List<IDisposable>();
 
     private bool stopRequested = false;
 
-    public ConnectionService(HubConnection connection, EndPoint serverEndPoint, ILogger<ConnectionService> logger)
+    public ConnectionService(HubConnection connection, GenericHubProxy genericHubProxy, ILogger<ConnectionService> logger)
     {
         this.connection = connection;
-        this.serverEndPoint = serverEndPoint;
+        this.genericHubProxy = genericHubProxy;
         this.logger = logger;
 
         connection.Closed += Connection_Closed;
@@ -38,15 +39,6 @@ internal class ConnectionService : IHostedService, IDisposable
 
         // Authenticate?
 
-        ((LocalPlayer)Multiplayer.Session.LocalPlayer).IsHost = false;
-
-        if (Config.Options.RememberLastIP)
-        {
-            // We've successfully connected, set connection as last ip, cutting out "ws://" and "/socket"
-            Config.Options.LastIP = this.serverEndPoint.ToString();
-            Config.SaveOptions();
-        }
-
         //if (Config.Options.RememberLastClientPassword && !string.IsNullOrWhiteSpace(serverPassword))
         //{
         //    Config.Options.LastClientPassword = serverPassword;
@@ -55,8 +47,22 @@ internal class ConnectionService : IHostedService, IDisposable
 
         // Login to lobby
 
+        while (this.connection.State == HubConnectionState.Connecting)
+        {
+            await Task.Delay(100).ConfigureAwait(false);
+        }
+
+        if (this.connection.State == HubConnectionState.Disconnected)
+        {
+            this.logger.LogError("Failed to connect to server.");
+            return;
+        }
+
+        this.logger.LogInformation("Connected, Logging in.");
+
         // Don't feel like injecting the client into this class for now, when a proper hub is established I'll rework to it.
-        Multiplayer.Session.Client.SendPacket(new LobbyRequest(
+
+        await this.genericHubProxy.SendPacketAsync(new LobbyRequest(
             CryptoUtils.GetPublicKey(CryptoUtils.GetOrCreateUserCert()),
             !string.IsNullOrWhiteSpace(Config.Options.Nickname) ? Config.Options.Nickname : GameMain.data.account.userName));
 
