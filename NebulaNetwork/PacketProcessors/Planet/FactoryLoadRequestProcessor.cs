@@ -18,10 +18,14 @@ public class FactoryLoadRequestProcessor : PacketProcessor<FactoryLoadRequest>
 {
     protected override void ProcessPacket(FactoryLoadRequest packet, NebulaConnection conn)
     {
+        Log.Info("FactoryLoadRequestProcessor");
         if (IsClient)
         {
             return;
         }
+        Log.Info("FactoryLoadRequestProcessor: Not Client");
+        Log.Info($"FactoryLoadRequestProcessor: {conn.Id}, {packet.PlanetID}");
+
 
         var planet = GameMain.galaxy.PlanetById(packet.PlanetID);
         var factory = GameMain.data.GetOrCreateFactory(planet);

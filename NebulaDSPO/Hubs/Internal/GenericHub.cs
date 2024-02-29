@@ -61,9 +61,9 @@ internal class GenericHub
 internal class GenericHubProxy
 {
     private readonly HubConnection connection;
-    private readonly ILogger<GameHistoryProxy> logger;
+    private readonly ILogger<GenericHubProxy> logger;
 
-    public GenericHubProxy(HubConnection connection, ILogger<GameHistoryProxy> logger)
+    public GenericHubProxy(HubConnection connection, ILogger<GenericHubProxy> logger)
     {
         this.connection = connection;
         this.logger = logger;
@@ -71,7 +71,7 @@ internal class GenericHubProxy
 
     public Task SendPacketAsync<T>(T packet, CancellationToken cancellationToken = default) where T : class, new()
     {
-        this.logger.LogInformation("Sending Packet");
+        this.logger.LogInformation("Sending Packet: {PacketType}", typeof(T).FullName);
         return this.connection.InvokeAsync("/genericHub/send", GenericHub.PacketProcessor.Write(packet), cancellationToken);
     }
 
@@ -80,13 +80,13 @@ internal class GenericHubProxy
 
     public Task SendPacketToLocalPlanetAsync<T>(T packet, CancellationToken cancellationToken = default) where T : class, new()
     {
-        this.logger.LogInformation("Sending Packet to Local Planet");
+        this.logger.LogInformation("Sending Packet to Local Planet: {PacketType}", typeof(T).FullName);
         return this.connection.InvokeAsync("/genericHub/sendToPlanet", GenericHub.PacketProcessor.Write(packet), Multiplayer.Session.LocalPlayer.Data.LocalPlanetId, cancellationToken);
     }
 
     public Task SendPacketToLocalStarAsync<T>(T packet, CancellationToken cancellationToken = default) where T : class, new()
     {
-        this.logger.LogInformation("Sending Packet to Star");
+        this.logger.LogInformation("Sending Packet to Star: {PacketType}", typeof(T).FullName);
         return this.connection.InvokeAsync("/genericHub/sendToStar", GenericHub.PacketProcessor.Write(packet), Multiplayer.Session.LocalPlayer.Data.LocalStarId, cancellationToken);
     }
 

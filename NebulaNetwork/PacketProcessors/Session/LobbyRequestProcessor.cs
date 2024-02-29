@@ -29,17 +29,20 @@ public class LobbyRequestProcessor : PacketProcessor<LobbyRequest>
 {
     protected override void ProcessPacket(LobbyRequest packet, NebulaConnection conn)
     {
+        Log.Info("LobbyRequestProcessor");
         if (IsClient)
         {
             return;
         }
+        Log.Info("LobbyRequestProcessor: Not Client");
+        Log.Info($"LobbyRequestProcessor: IsGameLoaded {Multiplayer.Session.IsGameLoaded}");
 
         INebulaPlayer player = Players.Get(conn, EConnectionStatus.Pending);
 
         if (player is null)
         {
-            Multiplayer.Session.Server.Disconnect(conn, DisconnectionReason.InvalidData);
             Log.Warn("WARNING: Player tried to enter lobby without being in the pending list");
+            Multiplayer.Session.Server.Disconnect(conn, DisconnectionReason.InvalidData);
             return;
         }
 

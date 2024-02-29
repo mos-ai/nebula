@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using EasyR.Client;
+using HarmonyLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -138,7 +139,7 @@ public class Client : IClient
         var builder = new HostBuilder();
         builder.ConfigureLogging(logBuilder =>
         {
-            logBuilder.AddConsole();
+            logBuilder.AddProvider(new Utilities.Logging.BepInExLoggerProvider());
             logBuilder.SetMinimumLevel(LogLevel.Trace);
         });
 
@@ -179,6 +180,7 @@ public class Client : IClient
             //services.AddSingleton<Hubs.WarningProxy>();
             // Catch all Client Proxy
             services.AddSingleton<Hubs.Internal.GenericHubProxy>();
+            services.AddSingleton<Hubs.Internal.PlayerConnectionHubProxy>();
         });
 
         this.host = builder.Build();

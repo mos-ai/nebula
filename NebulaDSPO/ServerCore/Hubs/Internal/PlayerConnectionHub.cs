@@ -18,8 +18,8 @@ internal class PlayerConnectionHub
     {
         this.serverManager = serverManager;
 
-        connection.RegisterEndpoint(ep => ep.On<string>("/playerConnectionHub/connected", this.serverManager.OnPlayerConnected));
-        connection.RegisterEndpoint(ep => ep.On<NebulaConnection>("/playerConnectionHub/disconnected", this.serverManager.OnPlayerDisconnected));
+        connection.RegisterEndpoint(ep => ep.On<string>("/serverCore/playerConnectionHub/connected", this.serverManager.OnPlayerConnected));
+        connection.RegisterEndpoint(ep => ep.On<NebulaConnection>("/serverCore/playerConnectionHub/disconnected", this.serverManager.OnPlayerDisconnected));
     }
 }
 

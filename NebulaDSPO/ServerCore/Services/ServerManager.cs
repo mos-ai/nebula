@@ -15,6 +15,7 @@ using NebulaModel.Packets.Players;
 using NebulaModel.Packets.Session;
 using NebulaWorld;
 using NebulaWorld.SocialIntegration;
+using Steamworks;
 
 namespace NebulaDSPO.ServerCore.Services;
 
@@ -66,6 +67,8 @@ internal class ServerManager : IDisposable
             position: new Double3(birthPlanet.uPosition.x, birthPlanet.uPosition.y, birthPlanet.uPosition.z));
 
         var playerConnection = new NullNebulaConnection(playerId);
+        if (!((Server)Multiplayer.Session.Server).PlayerConnections.TryAdd(connectionId, playerConnection))
+            throw new InvalidOperationException($"Connection {playerConnection.Id} already exists!");
 
         playerConnection.ConnectionStatus = EConnectionStatus.Pending;
 
@@ -84,6 +87,9 @@ internal class ServerManager : IDisposable
         var playerConnection = Players.Connected.Keys.Any(player => player.Id == connection.Id) ?
             Players.Connected.First(player => player.Key.Id == connection.Id).Key
             : new NullNebulaConnection(connection);
+
+        // TODO: Figure it after I see it working.
+        //((Server)Multiplayer.Session.Server).PlayerConnections.TryRemove(playerConnection.Id, out _)
 
         Multiplayer.Session.NumPlayers -= 1;
         DiscordManager.UpdateRichPresence();
@@ -159,15 +165,15 @@ internal class ServerManager : IDisposable
 
     private void OnConnected()
     {
-        this.logger.LogTrace("Server Connected");
+        this.logger.LogInformation("Server Connected");
 
         if (this.loadSaveFile)
         {
-            this.logger.LogTrace("Loading Save File");
+            this.logger.LogInformation("Loading Save File");
             SaveManager.LoadServerData();
         }
 
-        this.logger.LogTrace("Populating LocalPlayer");
+        this.logger.LogInformation("Populating LocalPlayer");
         ((LocalPlayer)Multiplayer.Session.LocalPlayer).SetPlayerData(new PlayerData(
                 GetNextPlayerId(),
                 GameMain.localPlanet?.id ?? -1,
@@ -179,7 +185,7 @@ internal class ServerManager : IDisposable
             {
                 try
                 {
-                    this.logger.LogTrace("Notifying Game Ready");
+                    this.logger.LogInformation("Notifying Game Ready");
                     NebulaModAPI.OnMultiplayerSessionChange(true);
                     NebulaModAPI.OnMultiplayerGameStarted?.Invoke();
                 }

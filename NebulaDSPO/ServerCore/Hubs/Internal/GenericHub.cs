@@ -32,9 +32,8 @@ internal class GenericHub
         this.logger = logger;
 
         Initialise();
-        connectionService.RegisterEndpoint(ep => ep.On<byte[]>("/genericHub/onMessage", OnMessage));
+        connectionService.RegisterEndpoint(ep => ep.On<byte[], string>("/genericHub/onMessage", OnMessage));
 
-        connectionService.RegisterEndpoint(ep => ep.On<byte[]>("/serverCore/genericHub/onMessage", OnMessage));
         connectionService.RegisterEndpoint(ep => ep.On<byte[], int>("/serverCore/genericHub/onPlanetMessage", OnPlanetMessage));
         connectionService.RegisterEndpoint(ep => ep.On<byte[], int>("/serverCore/genericHub/onStarMessage", OnStarMessage));
     }
@@ -64,8 +63,14 @@ internal class GenericHub
     internal void Update()
         => PacketProcessor.ProcessPacketQueue();
 
-    private void OnMessage(byte[] data)
-        => PacketProcessor.EnqueuePacketForProcessing(data, null);
+    private void OnMessage(byte[] data, string connectionId)
+    {
+        this.logger.LogInformation("Message Received: {ConnectionId}", connectionId);
+        if (!((Server)Multiplayer.Session.Server).PlayerConnections.TryGetValue(connectionId, out var connection))
+            return;
+        this.logger.LogInformation("Message Received: Player {PlayerId}, {ConnectionStatus}", connection.Id, connection.ConnectionStatus);
+        PacketProcessor.EnqueuePacketForProcessing(data, connection);
+    }
 
     private Task OnPlanetMessage(byte[] data, int planetId)
         => ((Server)Multiplayer.Session.Server).SendPacketToPlanetAsync(data, planetId);
@@ -78,22 +83,36 @@ internal class GenericHubProxy
 {
     private readonly HubConnection connection;
     private readonly GenericHub genericHub;
+    private readonly ILogger<GenericHubProxy> logger;
 
-    public GenericHubProxy(HubConnection connection, GenericHub genericHub)
+    public GenericHubProxy(HubConnection connection, GenericHub genericHub, ILogger<GenericHubProxy> logger)
     {
         this.connection = connection;
         this.genericHub = genericHub;
+        this.logger = logger;
     }
 
     public Task SendPacketAsync<T>(T packet, CancellationToken cancellationToken = default) where T : class, new()
-        => this.connection.InvokeAsync("/serverCore/genericHub/send", this.genericHub.PacketProcessor.Write(packet), cancellationToken);
+    {
+        this.logger.LogInformation("Sending Packet: {PacketType}", typeof(T).FullName);
+        return this.connection.InvokeAsync("/serverCore/genericHub/send", this.genericHub.PacketProcessor.Write(packet), cancellationToken);
+    }
 
     public Task SendPacketExcludeAsync<T>(T packet, NebulaConnection exclude, CancellationToken cancellationToken = default) where T : class, new()
-        => this.connection.InvokeAsync("/serverCore/genericHub/sendExclude", this.genericHub.PacketProcessor.Write(packet), exclude, cancellationToken);
+    {
+        this.logger.LogInformation("Sending Packet Exclude: {PacketType}", typeof(T).FullName);
+        return this.connection.InvokeAsync("/serverCore/genericHub/sendExclude", this.genericHub.PacketProcessor.Write(packet), exclude, cancellationToken);
+    }
 
     public Task SendToPlayersAsync<T>(IEnumerable<NebulaConnection> players, T packet, CancellationToken cancellationToken = default) where T : class, new()
-        => this.connection.InvokeAsync("/serverCore/genericHub/sendToPlayers", players.ToList(), this.genericHub.PacketProcessor.Write(packet), cancellationToken);
+    {
+        this.logger.LogInformation("Sending Packet Players: {PacketType}", typeof(T).FullName);
+        return this.connection.InvokeAsync("/serverCore/genericHub/sendToPlayers", players.ToList(), this.genericHub.PacketProcessor.Write(packet), cancellationToken);
+    }
 
     public Task SendToPlayersAsync(IEnumerable<NebulaConnection> players, byte[] rawData, CancellationToken cancellationToken = default)
-        => this.connection.InvokeAsync("/serverCore/genericHub/sendToPlayers", players.ToList(), rawData, cancellationToken);
+    {
+        this.logger.LogInformation("Sending Packet: rawData");
+        return this.connection.InvokeAsync("/serverCore/genericHub/sendToPlayers", players.ToList(), rawData, cancellationToken);
+    }
 }

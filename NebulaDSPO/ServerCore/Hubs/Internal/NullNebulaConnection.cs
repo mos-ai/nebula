@@ -1,4 +1,5 @@
-﻿using NebulaAPI.Networking;
+﻿using System.Collections.Generic;
+using NebulaAPI.Networking;
 using NebulaDSPO.ServerCore.Models.Internal;
 using NebulaWorld;
 
@@ -27,12 +28,17 @@ internal class NullNebulaConnection : INebulaConnection
 
     public void SendPacket<T>(T packet) where T : class, new()
     {
-        Multiplayer.Session.Server.SendPacket(packet);
+        Multiplayer.Session.Server.SendToPlayers(
+            [new KeyValuePair<INebulaConnection, NebulaAPI.GameState.INebulaPlayer>(this, null!)],
+            packet);
     }
 
     public void SendRawPacket(byte[] rawData)
     {
-        throw new NotImplementedException();
+        ((Server)Multiplayer.Session.Server).SendToPlayersAsync(
+            [new KeyValuePair<INebulaConnection, NebulaAPI.GameState.INebulaPlayer>(this, null!)],
+            rawData)
+            .SafeFireAndForget();
     }
 
     public static implicit operator NebulaConnection(NullNebulaConnection connection) => new NebulaConnection(connection.Id);

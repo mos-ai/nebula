@@ -18,16 +18,21 @@ internal class ConnectionService : IHostedService, IDisposable
 
     private readonly HubConnection connection;
     private readonly GenericHubProxy genericHubProxy;
+    private readonly PlayerConnectionHubProxy playerConnectionHubProxy;
     private readonly ILogger<ConnectionService> logger;
 
     private List<IDisposable> endpointSubscriptions = new List<IDisposable>();
 
     private bool stopRequested = false;
 
-    public ConnectionService(HubConnection connection, GenericHubProxy genericHubProxy, ILogger<ConnectionService> logger)
+    public ConnectionService(HubConnection connection,
+                             GenericHubProxy genericHubProxy,
+                             PlayerConnectionHubProxy playerConnectionHubProxy,
+                             ILogger<ConnectionService> logger)
     {
         this.connection = connection;
         this.genericHubProxy = genericHubProxy;
+        this.playerConnectionHubProxy = playerConnectionHubProxy;
         this.logger = logger;
 
         connection.Closed += Connection_Closed;
@@ -49,7 +54,7 @@ internal class ConnectionService : IHostedService, IDisposable
 
         while (this.connection.State == HubConnectionState.Connecting)
         {
-            await Task.Delay(100).ConfigureAwait(false);
+            await Task.Delay(100, cancellationToken).ConfigureAwait(false);
         }
 
         if (this.connection.State == HubConnectionState.Disconnected)
@@ -62,9 +67,12 @@ internal class ConnectionService : IHostedService, IDisposable
 
         // Don't feel like injecting the client into this class for now, when a proper hub is established I'll rework to it.
 
+        await this.playerConnectionHubProxy.PlayerConnectedAsync(cancellationToken).ConfigureAwait(false);
+
         await this.genericHubProxy.SendPacketAsync(new LobbyRequest(
             CryptoUtils.GetPublicKey(CryptoUtils.GetOrCreateUserCert()),
-            !string.IsNullOrWhiteSpace(Config.Options.Nickname) ? Config.Options.Nickname : GameMain.data.account.userName));
+            !string.IsNullOrWhiteSpace(Config.Options.Nickname) ? Config.Options.Nickname : GameMain.data.account.userName), cancellationToken)
+            .ConfigureAwait(false);
 
         try
         {

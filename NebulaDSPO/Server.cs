@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using EasyR.Client;
@@ -51,6 +52,8 @@ public class Server : IServer
     public bool NgrokEnabled => false;
     public string NgrokLastErrorCode => string.Empty;
     public ConcurrentPlayerCollection Players { get; } = new();
+    public ConcurrentDictionary<string, INebulaConnection> PlayerConnections { get; } = new();
+
     public INetPacketProcessor PacketProcessor => this.genericHub?.PacketProcessor ?? throw new ApplicationException("PacketProcessor not initialised. Have you started a game?");
 
     public event EventHandler<INebulaConnection>? Connected;
@@ -212,7 +215,7 @@ public class Server : IServer
         // For now just put all data through the generic hub
         try
         {
-            return genericHubProxy.SendToPlayersAsync(playerConnections, rawData);
+            return genericHubProxy?.SendToPlayersAsync(playerConnections, rawData) ?? throw new NullReferenceException("GenericHubProxy not initialised.");
         }
         catch (Exception ex)
         {
@@ -230,7 +233,7 @@ public class Server : IServer
         var builder = new HostBuilder();
         builder.ConfigureLogging(logBuilder =>
         {
-            logBuilder.AddConsole();
+            logBuilder.AddProvider(new Utilities.Logging.BepInExLoggerProvider());
             logBuilder.SetMinimumLevel(LogLevel.Trace);
         });
 
