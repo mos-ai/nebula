@@ -34,8 +34,8 @@ public class LobbyRequestProcessor : PacketProcessor<LobbyRequest>
         {
             return;
         }
-        Log.Info("LobbyRequestProcessor: Not Client");
         Log.Info($"LobbyRequestProcessor: IsGameLoaded {Multiplayer.Session.IsGameLoaded}");
+        Log.Info($"LobbyRequestProcessor: NebulaConnection Id {conn.Id}");
 
         INebulaPlayer player = Players.Get(conn, EConnectionStatus.Pending);
 

@@ -69,6 +69,8 @@ internal class ConnectionService : IHostedService, IDisposable
 
         await this.playerConnectionHubProxy.PlayerConnectedAsync(cancellationToken).ConfigureAwait(false);
 
+        await Task.Delay(1000).ConfigureAwait(false); // Server needs a moment...
+
         await this.genericHubProxy.SendPacketAsync(new LobbyRequest(
             CryptoUtils.GetPublicKey(CryptoUtils.GetOrCreateUserCert()),
             !string.IsNullOrWhiteSpace(Config.Options.Nickname) ? Config.Options.Nickname : GameMain.data.account.userName), cancellationToken)

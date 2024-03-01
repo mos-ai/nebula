@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using NebulaAPI.Interfaces;
 using NebulaAPI.Networking;
 using NebulaAPI.Packets;
 using NebulaModel.Logger;

@@ -8,7 +8,6 @@ using NebulaAPI.DataStructures;
 using NebulaAPI.GameState;
 using NebulaAPI.Networking;
 using NebulaDSPO.ServerCore.Hubs.Internal;
-using NebulaDSPO.ServerCore.Models.Internal;
 using NebulaModel;
 using NebulaModel.DataStructures;
 using NebulaModel.Packets.Players;
@@ -36,11 +35,13 @@ internal class ServerManager : IDisposable
 
     public ConcurrentPlayerCollection Players { get; } = new();
 
-    public event EventHandler<INebulaConnection>? Connected;
-    public event EventHandler<INebulaConnection>? Disconnected;
+    //public event EventHandler<INebulaConnection>? Connected;
+    //public event EventHandler<INebulaConnection>? Disconnected;
 
     public ServerManager(ConnectionService connection, PlayerConnectionHubProxy playerConnectionHubProxy, bool loadSaveFile, ILogger<ServerManager> logger)
     {
+        logger.LogInformation("Server Manager Initialised.");
+
         this.connection = connection;
         this.playerConnectionHubProxy = playerConnectionHubProxy;
         this.logger = logger;
@@ -66,27 +67,32 @@ internal class ServerManager : IDisposable
         var playerData = new PlayerData(playerId, -1,
             position: new Double3(birthPlanet.uPosition.x, birthPlanet.uPosition.y, birthPlanet.uPosition.z));
 
-        var playerConnection = new NullNebulaConnection(playerId);
+        var playerConnection = new HubNebulaConnection(playerId, Multiplayer.Session.Server.PacketProcessor);
+        playerConnection.ConnectionStatus = EConnectionStatus.Pending;
+        INebulaPlayer newPlayer = new NebulaPlayer(playerConnection, playerData);
+
         if (!((Server)Multiplayer.Session.Server).PlayerConnections.TryAdd(connectionId, playerConnection))
             throw new InvalidOperationException($"Connection {playerConnection.Id} already exists!");
 
-        playerConnection.ConnectionStatus = EConnectionStatus.Pending;
-
-        INebulaPlayer newPlayer = new NebulaPlayer(playerConnection, playerData);
         if (!Players.TryAdd(playerConnection, newPlayer))
             throw new InvalidOperationException($"Connection {playerConnection.Id} already exists!");
 
-        this.playerConnectionHubProxy.PlayerConnectedAsync(connectionId, newPlayer.Id).SafeFireAndForget(ex => this.logger.LogError(ex, "Failed to call /serverCore/playerConnectionHub/playerConnected"));
+        this.logger.LogInformation("Current Players (Pending):   {PendingPlayers}",   string.Join(", ", Players.Pending.Select(x => x.Key.Id)));
+        this.logger.LogInformation("Current Players (Syncing):   {SyncingPlayers}",   string.Join(", ", Players.Syncing.Select(x => x.Key.Id)));
+        this.logger.LogInformation("Current Players (Connected): {ConnectedPlayers}", string.Join(", ", Players.Connected.Select(x => x.Key.Id)));
 
+        this.logger.LogInformation("ConnectionPlayers: {ConnectionPlayers}", string.Join(", ", ((Server)Multiplayer.Session.Server).PlayerConnections.Select(x => $"{x.Key} | {x.Value.Id}")));
+
+        this.playerConnectionHubProxy.PlayerConnectedAsync(connectionId, newPlayer.Id).SafeFireAndForget(ex => this.logger.LogError(ex, "Failed to call /serverCore/playerConnectionHub/playerConnected"));
         // return newPlayer;
-        Connected?.Invoke(this, playerConnection);
+        //Connected?.Invoke(this, playerConnection);
     }
 
-    internal void OnPlayerDisconnected(NebulaConnection connection)
+    internal void OnPlayerDisconnected(string connectionId, INebulaConnection connection)
     {
-        var playerConnection = Players.Connected.Keys.Any(player => player.Id == connection.Id) ?
+        var playerConnection = Players.Connected.Any(player => player.Key.Id == connection.Id) ?
             Players.Connected.First(player => player.Key.Id == connection.Id).Key
-            : new NullNebulaConnection(connection);
+            : new HubNebulaConnection(connection, Multiplayer.Session.Server.PacketProcessor);
 
         // TODO: Figure it after I see it working.
         //((Server)Multiplayer.Session.Server).PlayerConnections.TryRemove(playerConnection.Id, out _)
@@ -95,6 +101,7 @@ internal class ServerManager : IDisposable
         DiscordManager.UpdateRichPresence();
 
         Players.TryRemove(playerConnection, out var player);
+        ((Server)Multiplayer.Session.Server).PlayerConnections.TryRemove(connectionId, out var _);
 
         // @TODO: Why can this happen in the first place?
         // Figure out why it was possible before the move and fix that issue at the root.
@@ -148,7 +155,7 @@ internal class ServerManager : IDisposable
 
         Multiplayer.Session.Server.SendPacket(new SyncComplete());
         Multiplayer.Session.World.OnAllPlayersSyncCompleted();
-        Disconnected?.Invoke(this, playerConnection);
+        //Disconnected?.Invoke(this, playerConnection);
     }
 
     private void ConnectionChanged(bool newState)

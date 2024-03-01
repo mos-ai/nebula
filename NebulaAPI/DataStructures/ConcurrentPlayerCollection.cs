@@ -142,7 +142,7 @@ public class ConcurrentPlayerCollection
         return saves;
     }
 
-    private class ReducedConcurrentDictionary<TKey, TValue> : ConcurrentDictionary<TKey, TValue>
+    public class ReducedConcurrentDictionary<TKey, TValue> : ConcurrentDictionary<TKey, TValue>
     {
 #pragma warning disable CA1822
         // These are disabled as they create a new snapshot copy of the existing values.

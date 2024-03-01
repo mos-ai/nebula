@@ -1,8 +1,7 @@
-﻿using System.Threading;
-using EasyR.Client;
-using NebulaDSPO.Hubs.Internal;
-using NebulaDSPO.ServerCore.Models.Internal;
+﻿using EasyR.Client;
+using Microsoft.Extensions.Logging;
 using NebulaDSPO.ServerCore.Services;
+using NebulaWorld;
 
 namespace NebulaDSPO.ServerCore.Hubs.Internal;
 
@@ -13,13 +12,37 @@ namespace NebulaDSPO.ServerCore.Hubs.Internal;
 internal class PlayerConnectionHub
 {
     private readonly ServerManager serverManager;
+    private readonly ILogger<PlayerConnectionHub> logger;
 
-    public PlayerConnectionHub(ConnectionService connection, ServerCore.Services.ServerManager serverManager)
+    public PlayerConnectionHub(ConnectionService connection, ServerCore.Services.ServerManager serverManager, ILogger<PlayerConnectionHub> logger)
     {
-        this.serverManager = serverManager;
+        logger.LogInformation("Initialised {HubName}.", nameof(PlayerConnectionHub));
 
-        connection.RegisterEndpoint(ep => ep.On<string>("/serverCore/playerConnectionHub/connected", this.serverManager.OnPlayerConnected));
-        connection.RegisterEndpoint(ep => ep.On<NebulaConnection>("/serverCore/playerConnectionHub/disconnected", this.serverManager.OnPlayerDisconnected));
+        this.serverManager = serverManager;
+        this.logger = logger;
+
+        connection.RegisterEndpoint(ep => ep.On<string>("/serverCore/playerConnectionHub/connected", OnPlayerConnected));
+        connection.RegisterEndpoint(ep => ep.On<string>("/serverCore/playerConnectionHub/disconnected", OnPlayerDisconnected));
+    }
+
+    internal void OnPlayerConnected(string connectionId)
+    {
+        this.logger.LogInformation("Player connected: {ConnectionId}", connectionId);
+        this.serverManager.OnPlayerConnected(connectionId);
+    }
+
+    internal void OnPlayerDisconnected(string connectionId)
+    {
+        this.logger.LogInformation("Player disconnected: {ConnectionId}", connectionId);
+        if (!((Server)Multiplayer.Session.Server).PlayerConnections.TryGetValue(connectionId, out var connection))
+        {
+            this.logger.LogInformation("Player disconnected (No match Found): {ConnectionId}", connectionId);
+            return;
+        }
+
+        this.logger.LogInformation("Player disconnected: {ConnectionId}, Id: {PlayerId}", connectionId, connection.Id);
+
+        this.serverManager.OnPlayerDisconnected(connectionId, connection);
     }
 }
 
@@ -33,8 +56,8 @@ internal class PlayerConnectionHubProxy
     }
 
     public Task ServerConnectedAsync(CancellationToken cancellationToken = default)
-        => this.connection.InvokeAsync("/serverCore/playerConnectionHub/serverConnected", cancellationToken);
+        => this.connection.SendAsync("/serverCore/playerConnectionHub/serverConnected", cancellationToken);
 
     public Task PlayerConnectedAsync(string connectionId, int playerId, CancellationToken cancellationToken = default)
-        => this.connection.InvokeAsync("/serverCore/playerConnectionHub/playerConnected", connectionId, playerId, cancellationToken);
+        => this.connection.SendAsync("/serverCore/playerConnectionHub/playerConnected", connectionId, playerId, cancellationToken);
 }

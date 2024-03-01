@@ -9,12 +9,14 @@ using Microsoft.Extensions.Logging;
 using NebulaAPI.DataStructures;
 using NebulaAPI.GameState;
 using NebulaAPI.Networking;
+using NebulaDSPO.ServerCore.Hubs.Internal;
 using NebulaDSPO.ServerCore.Services;
 using NebulaModel;
 using NebulaModel.Networking;
 using NebulaModel.Packets.GameHistory;
 using NebulaWorld;
 using UnityEngine;
+using static NebulaAPI.DataStructures.ConcurrentPlayerCollection;
 
 namespace NebulaDSPO;
 
@@ -51,13 +53,13 @@ public class Server : IServer
     public bool NgrokActive => false;
     public bool NgrokEnabled => false;
     public string NgrokLastErrorCode => string.Empty;
-    public ConcurrentPlayerCollection Players { get; } = new();
-    public ConcurrentDictionary<string, INebulaConnection> PlayerConnections { get; } = new();
+    public ConcurrentPlayerCollection Players => serverManager!.Players;
+    public ReducedConcurrentDictionary<string, INebulaConnection> PlayerConnections { get; } = new();
 
     public INetPacketProcessor PacketProcessor => this.genericHub?.PacketProcessor ?? throw new ApplicationException("PacketProcessor not initialised. Have you started a game?");
 
-    public event EventHandler<INebulaConnection>? Connected;
-    public event EventHandler<INebulaConnection>? Disconnected;
+    //public event EventHandler<INebulaConnection>? Connected;
+    //public event EventHandler<INebulaConnection>? Disconnected;
 
     public Server(string url, int port, string password, bool loadSaveFile = false)
         : this(new IPEndPoint(Dns.GetHostEntry(url).AddressList[0], port), password, loadSaveFile)
@@ -79,7 +81,12 @@ public class Server : IServer
 
     public void Disconnect(INebulaConnection conn, DisconnectionReason reason, string reasonMessage = "")
     {
-        this.serverManager?.OnPlayerDisconnected(new ServerCore.Models.Internal.NebulaConnection(conn.Id));
+        // Hack for now, need to fix.
+        if (PlayerConnections.Any(x => x.Value.Id == conn.Id))
+        {
+            var playerConnection = PlayerConnections.First(x => x.Value.Id == conn.Id);
+            this.serverManager?.OnPlayerDisconnected(playerConnection.Key, conn);
+        }
     }
 
     public void SendPacket<T>(T packet) where T : class, new()
@@ -97,7 +104,7 @@ public class Server : IServer
         //HubDispatcher.Dispatch<T>(packet);
 
         // For now just put all data through the generic hub
-        genericHubProxy?.SendPacketExcludeAsync(packet, new ServerCore.Models.Internal.NebulaConnection(exclude.Id))
+        genericHubProxy?.SendPacketExcludeAsync(packet, exclude)
             .SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /serverCore/genericHub/sendExclude"));
     }
 
@@ -197,7 +204,7 @@ public class Server : IServer
 
     public void SendToPlayers<T>(IEnumerable<KeyValuePair<INebulaConnection, INebulaPlayer>> players, T packet) where T : class, new()
     {
-        var playerConnections = players.Select(player => new ServerCore.Models.Internal.NebulaConnection(player.Key.Id));
+        var playerConnections = players.Select(player => player.Key);
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
@@ -208,7 +215,7 @@ public class Server : IServer
 
     public Task SendToPlayersAsync(IEnumerable<KeyValuePair<INebulaConnection, INebulaPlayer>> players, byte[] rawData)
     {
-        var playerConnections = players.Select(player => new ServerCore.Models.Internal.NebulaConnection(player.Key.Id));
+        var playerConnections = players.Select(player => player.Key);
         // TODO: Implement a solution.
         //HubDispatcher.Dispatch<T>(packet);
 
@@ -283,12 +290,16 @@ public class Server : IServer
 
         this.host = builder.Build();
 
-        // Start Client
-        this.host.Start();
-
+        // Initialise before starting.
         this.genericHub = host.Services.GetRequiredService<ServerCore.Hubs.Internal.GenericHub>();
         this.genericHubProxy = host.Services.GetRequiredService<ServerCore.Hubs.Internal.GenericHubProxy>();
         this.serverManager = host.Services.GetRequiredService<ServerManager>();
+
+        // Lazy solution
+        var playerConnectionHub = host.Services.GetRequiredService<PlayerConnectionHub>(); // Not initialising, this forces it.
+
+        // Start Client
+        this.host.Start();
     }
 
     public void Stop()

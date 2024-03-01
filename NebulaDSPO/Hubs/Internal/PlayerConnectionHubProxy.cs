@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using EasyR.Client;
+﻿using EasyR.Client;
 
 namespace NebulaDSPO.Hubs.Internal;
 internal class PlayerConnectionHubProxy
@@ -16,5 +11,5 @@ internal class PlayerConnectionHubProxy
     }
 
     public Task PlayerConnectedAsync(CancellationToken cancellationToken = default)
-        => this.connection.InvokeAsync("/playerConnectionHub/connected", cancellationToken);
+        => this.connection.SendAsync("/playerConnectionHub/connected", cancellationToken);
 }

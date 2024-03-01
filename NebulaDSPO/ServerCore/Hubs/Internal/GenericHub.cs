@@ -8,10 +8,8 @@ using NebulaAPI.Networking;
 using NebulaDSPO.ServerCore.Services;
 using NebulaModel.Networking;
 using NebulaModel.Networking.Serialization;
-using NebulaModel.Packets;
 using NebulaModel.Utils;
 using NebulaWorld;
-using NebulaConnection = NebulaDSPO.ServerCore.Models.Internal.NebulaConnection;
 
 namespace NebulaDSPO.ServerCore.Hubs.Internal;
 
@@ -67,7 +65,12 @@ internal class GenericHub
     {
         this.logger.LogInformation("Message Received: {ConnectionId}", connectionId);
         if (!((Server)Multiplayer.Session.Server).PlayerConnections.TryGetValue(connectionId, out var connection))
+        {
+            this.logger.LogInformation("Message Received: Player Not Found");
+            this.logger.LogInformation("Clients: {ClientIds}", string.Join(", ", ((Server)Multiplayer.Session.Server).PlayerConnections.Select(x => x.Key)));
             return;
+        }
+
         this.logger.LogInformation("Message Received: Player {PlayerId}, {ConnectionStatus}", connection.Id, connection.ConnectionStatus);
         PacketProcessor.EnqueuePacketForProcessing(data, connection);
     }
@@ -94,25 +97,31 @@ internal class GenericHubProxy
 
     public Task SendPacketAsync<T>(T packet, CancellationToken cancellationToken = default) where T : class, new()
     {
-        this.logger.LogInformation("Sending Packet: {PacketType}", typeof(T).FullName);
-        return this.connection.InvokeAsync("/serverCore/genericHub/send", this.genericHub.PacketProcessor.Write(packet), cancellationToken);
+        if (typeof(T).FullName != "NebulaModel.Packets.Players.PlayerMovement")
+            this.logger.LogInformation("Sending Packet: {PacketType}", typeof(T).FullName);
+
+        return this.connection.SendAsync("/serverCore/genericHub/send", this.genericHub.PacketProcessor.Write(packet), cancellationToken);
     }
 
-    public Task SendPacketExcludeAsync<T>(T packet, NebulaConnection exclude, CancellationToken cancellationToken = default) where T : class, new()
+    public Task SendPacketExcludeAsync<T>(T packet, INebulaConnection exclude, CancellationToken cancellationToken = default) where T : class, new()
     {
-        this.logger.LogInformation("Sending Packet Exclude: {PacketType}", typeof(T).FullName);
-        return this.connection.InvokeAsync("/serverCore/genericHub/sendExclude", this.genericHub.PacketProcessor.Write(packet), exclude, cancellationToken);
+        if (typeof(T).FullName != "NebulaModel.Packets.Players.PlayerMovement")
+            this.logger.LogInformation("Sending Packet Exclude: {PacketType}", typeof(T).FullName);
+
+        return this.connection.SendAsync("/serverCore/genericHub/sendExclude", this.genericHub.PacketProcessor.Write(packet), exclude.Id, cancellationToken);
     }
 
-    public Task SendToPlayersAsync<T>(IEnumerable<NebulaConnection> players, T packet, CancellationToken cancellationToken = default) where T : class, new()
+    public Task SendToPlayersAsync<T>(IEnumerable<INebulaConnection> players, T packet, CancellationToken cancellationToken = default) where T : class, new()
     {
-        this.logger.LogInformation("Sending Packet Players: {PacketType}", typeof(T).FullName);
-        return this.connection.InvokeAsync("/serverCore/genericHub/sendToPlayers", players.ToList(), this.genericHub.PacketProcessor.Write(packet), cancellationToken);
+        if (typeof(T).FullName != "NebulaModel.Packets.Players.PlayerMovement")
+            this.logger.LogInformation("Sending Packet Players: {PacketType}", typeof(T).FullName);
+
+        return this.connection.SendAsync("/serverCore/genericHub/sendToPlayers", players.Select(player => player.Id).ToList(), this.genericHub.PacketProcessor.Write(packet), cancellationToken);
     }
 
-    public Task SendToPlayersAsync(IEnumerable<NebulaConnection> players, byte[] rawData, CancellationToken cancellationToken = default)
+    public Task SendToPlayersAsync(IEnumerable<INebulaConnection> players, byte[] rawData, CancellationToken cancellationToken = default)
     {
         this.logger.LogInformation("Sending Packet: rawData");
-        return this.connection.InvokeAsync("/serverCore/genericHub/sendToPlayers", players.ToList(), rawData, cancellationToken);
+        return this.connection.SendAsync("/serverCore/genericHub/sendToPlayers", players.Select(player => player.Id).ToList(), rawData, cancellationToken);
     }
 }

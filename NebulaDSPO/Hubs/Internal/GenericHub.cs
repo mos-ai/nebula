@@ -20,12 +20,15 @@ internal class GenericHub
     private readonly ILogger<GenericHub> logger;
 
     internal static INetPacketProcessor PacketProcessor = new NebulaNetPacketProcessor();
+    private HubNebulaConnection serverConnection;
 
     public GenericHub(ConnectionService connection, ILogger<GenericHub> logger)
     {
         this.logger = logger;
 
         Initialise();
+        this.serverConnection = new HubNebulaConnection(1, PacketProcessor);
+
         connection.RegisterEndpoint(ep => ep.On<byte[]>("/genericHub/onMessage", OnMessage));
     }
 
@@ -55,7 +58,13 @@ internal class GenericHub
         => PacketProcessor.ProcessPacketQueue();
 
     private void OnMessage(byte[] rawData)
-        => PacketProcessor.EnqueuePacketForProcessing(rawData, null);
+    {
+        if (Multiplayer.IsLeavingGame)
+            return;
+
+        this.logger.LogInformation("Message Received");
+        PacketProcessor.EnqueuePacketForProcessing(rawData, this.serverConnection);
+    }
 }
 
 internal class GenericHubProxy
@@ -71,8 +80,15 @@ internal class GenericHubProxy
 
     public Task SendPacketAsync<T>(T packet, CancellationToken cancellationToken = default) where T : class, new()
     {
-        this.logger.LogInformation("Sending Packet: {PacketType}", typeof(T).FullName);
-        return this.connection.InvokeAsync("/genericHub/send", GenericHub.PacketProcessor.Write(packet), cancellationToken);
+        if (typeof(T).FullName != "NebulaModel.Packets.Players.PlayerMovement")
+            this.logger.LogInformation("Sending Packet: {PacketType}", typeof(T).FullName);
+
+        return this.connection.SendAsync("/genericHub/send", GenericHub.PacketProcessor.Write(packet), cancellationToken);
+    }
+
+    public Task SendPacketAsync(byte[] rawData, CancellationToken cancellationToken = default)
+    {
+        return this.connection.SendAsync("/genericHub/send", rawData, cancellationToken);
     }
 
     //public Task SendPacketExcludeAsync<T>(T packet, INebulaConnection exclude, CancellationToken cancellationToken = default) where T : class, new()
@@ -81,13 +97,13 @@ internal class GenericHubProxy
     public Task SendPacketToLocalPlanetAsync<T>(T packet, CancellationToken cancellationToken = default) where T : class, new()
     {
         this.logger.LogInformation("Sending Packet to Local Planet: {PacketType}", typeof(T).FullName);
-        return this.connection.InvokeAsync("/genericHub/sendToPlanet", GenericHub.PacketProcessor.Write(packet), Multiplayer.Session.LocalPlayer.Data.LocalPlanetId, cancellationToken);
+        return this.connection.SendAsync("/genericHub/sendToPlanet", GenericHub.PacketProcessor.Write(packet), Multiplayer.Session.LocalPlayer.Data.LocalPlanetId, cancellationToken);
     }
 
     public Task SendPacketToLocalStarAsync<T>(T packet, CancellationToken cancellationToken = default) where T : class, new()
     {
         this.logger.LogInformation("Sending Packet to Star: {PacketType}", typeof(T).FullName);
-        return this.connection.InvokeAsync("/genericHub/sendToStar", GenericHub.PacketProcessor.Write(packet), Multiplayer.Session.LocalPlayer.Data.LocalStarId, cancellationToken);
+        return this.connection.SendAsync("/genericHub/sendToStar", GenericHub.PacketProcessor.Write(packet), Multiplayer.Session.LocalPlayer.Data.LocalStarId, cancellationToken);
     }
 
     //public Task SendPacketToPlanetAsync<T>(T packet, int planetId, CancellationToken cancellationToken = default) where T : class, new()

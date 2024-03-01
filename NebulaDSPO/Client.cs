@@ -57,6 +57,11 @@ public class Client : IClient
         genericHubProxy?.SendPacketAsync(packet).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/send"));
     }
 
+    public void SendPacket(byte[] rawData)
+    {
+        genericHubProxy?.SendPacketAsync(rawData).SafeFireAndForget(ex => this.logger?.LogError(ex, "Failed to call /genericHub/send"));
+    }
+
     public void SendPacketExclude<T>(T packet, INebulaConnection exclude) where T : class, new()
     {
         throw new NotSupportedException($"Client doesn't support {nameof(SendPacketExclude)}");
@@ -185,11 +190,13 @@ public class Client : IClient
 
         this.host = builder.Build();
 
-        // Start Client
-        this.host.Start();
-
+        // Need to ensure initialised before connecting.
+        // Need to rework design.
         this.genericHub = host.Services.GetRequiredService<Hubs.Internal.GenericHub>();
         this.genericHubProxy = host.Services.GetRequiredService<Hubs.Internal.GenericHubProxy>();
+
+        // Start Client
+        this.host.Start();
     }
 
     public void Stop()

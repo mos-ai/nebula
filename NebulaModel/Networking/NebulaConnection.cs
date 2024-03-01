@@ -15,7 +15,7 @@ namespace NebulaModel.Networking;
 
 public class NebulaConnection : INebulaConnection
 {
-    private readonly NebulaNetPacketProcessor packetProcessor;
+    private readonly INetPacketProcessor packetProcessor;
 
     private readonly EndPoint peerEndpoint;
 
@@ -26,9 +26,9 @@ public class NebulaConnection : INebulaConnection
     private bool enable = true;
     private EConnectionStatus connectionStatus = EConnectionStatus.Undefined;
 
-    public bool IsAlive => peerSocket?.IsAlive ?? false;
+    public virtual bool IsAlive => peerSocket?.IsAlive ?? false;
 
-    public int Id { get; }
+    public int Id { get; protected set; }
 
     public EConnectionStatus ConnectionStatus
     {
@@ -42,7 +42,7 @@ public class NebulaConnection : INebulaConnection
         }
     }
 
-    public NebulaConnection(WebSocket peerSocket, EndPoint peerEndpoint, NebulaNetPacketProcessor packetProcessor)
+    public NebulaConnection(WebSocket peerSocket, EndPoint peerEndpoint, INetPacketProcessor packetProcessor)
     {
         this.peerEndpoint = peerEndpoint;
         this.peerSocket = peerSocket;
@@ -51,7 +51,7 @@ public class NebulaConnection : INebulaConnection
     }
 
 
-    public void SendPacket<T>(T packet) where T : class, new()
+    public virtual void SendPacket<T>(T packet) where T : class, new()
     {
         lock (pendingPackets)
         {
@@ -61,7 +61,7 @@ public class NebulaConnection : INebulaConnection
         }
     }
 
-    public void SendRawPacket(byte[] rawData)
+    public virtual void SendRawPacket(byte[] rawData)
     {
         lock (pendingPackets)
         {

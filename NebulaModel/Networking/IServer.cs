@@ -14,8 +14,8 @@ public interface IServer : INetworkProvider
     bool NgrokActive { get; }
     bool NgrokEnabled { get; }
     string NgrokLastErrorCode { get; }
-    public event EventHandler<INebulaConnection> Connected;
-    public event EventHandler<INebulaConnection> Disconnected;
+    //public event EventHandler<INebulaConnection> Connected;
+    //public event EventHandler<INebulaConnection> Disconnected;
 
     public ConcurrentPlayerCollection Players { get; }
 
